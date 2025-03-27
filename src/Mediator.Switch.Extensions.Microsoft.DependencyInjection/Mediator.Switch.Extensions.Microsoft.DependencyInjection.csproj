@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
+        <Description>Microsoft Dependency Injection extensions for Mediator.Switch.</Description>
     </PropertyGroup>
 
     <ItemGroup>

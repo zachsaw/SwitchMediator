@@ -6,6 +6,8 @@
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <PackageTags>mediator cqrs switch pattern matching</PackageTags>
+        <Description>A Mediator implementation using source generated C# switch expressions for handler dispatch enabling faster execution, improved startup times, step-into debuggability, and compile-time safety.</Description>
     </PropertyGroup>
 
     <ItemGroup>
