@@ -14,8 +14,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Update="Mediator.Abstractions.cs" />
-        <None Include="SwitchMediatorSourceGenerator.cs" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <Compile Update="Abstractions.cs" />
+        <None Include="SourceGenerator/SwitchMediatorSourceGenerator.cs" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
     
 </Project>
