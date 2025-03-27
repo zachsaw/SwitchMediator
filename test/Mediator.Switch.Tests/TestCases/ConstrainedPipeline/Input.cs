@@ -1,0 +1,53 @@
+using Mediator.Switch;
+using System;
+using System.Threading.Tasks;
+
+namespace Test.Constrained;
+
+// Marker interface for constraint
+public interface ISpecialProcessingRequired { }
+
+// Request implementing the marker
+public class SpecialProcessRequest : IRequest<Guid>, ISpecialProcessingRequired
+{
+    public string Data { get; set; } = "";
+}
+
+// Handler for the request
+public class SpecialProcessRequestHandler : IRequestHandler<SpecialProcessRequest, Guid>
+{
+    public Task<Guid> Handle(SpecialProcessRequest request) => Task.FromResult(Guid.NewGuid());
+}
+
+// A generic behavior that applies to all requests
+public class GenericLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+{
+    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    {
+        Console.WriteLine($"Generic Log: Start {typeof(TRequest).Name}");
+        var response = await next(request);
+        Console.WriteLine($"Generic Log: End {typeof(TRequest).Name}");
+        return response;
+    }
+}
+
+// A behavior constrained to the marker interface
+public class SpecialProcessingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : ISpecialProcessingRequired // Constraint
+{
+    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    {
+        Console.WriteLine($"Special Behavior: Applying special processing to {typeof(TRequest).Name}");
+        // Add some "processing" delay or modification if needed for testing runtime
+        var response = await next(request);
+        Console.WriteLine($"Special Behavior: Finished special processing");
+        return response;
+    }
+}
+
+// Another request that *doesn't* implement the marker
+public class NormalRequest : IRequest<int>;
+public class NormalRequestHandler : IRequestHandler<NormalRequest, int>
+{
+    public Task<int> Handle(NormalRequest request) => Task.FromResult(100);
+}
