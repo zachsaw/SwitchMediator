@@ -6,7 +6,9 @@
 
 **SwitchMediator: A Blazing Fast, Source-Generated Mediator for .NET**
 
-SwitchMediator provides a high-performance implementation of the mediator pattern, offering an API surface familiar to users of popular libraries like [MediatR](https://github.com/jbogard/MediatR). By leveraging **C# Source Generators**, SwitchMediator eliminates runtime reflection for handler discovery and dispatch, instead generating highly optimized `switch` statements at compile time. We also want you to **Switch** your **Mediator** to ours, get it? 😉
+SwitchMediator provides a high-performance implementation of the mediator pattern, offering an API surface familiar to users of popular libraries like [MediatR](https://github.com/jbogard/MediatR). By leveraging **C# Source Generators**, SwitchMediator eliminates runtime reflection for handler discovery and dispatch, instead generating highly optimized `switch` statements at compile time. We also want you to <em>**Switch**</em> your <em>**Mediator**</em> to ours, get it? 😉
+
+Aside from performance, SwitchMediator is first and foremost designed to overcome frequent community frustrations with MediatR, addressing factors that have hindered its wider adoption.
 
 **The result? Faster execution, improved startup times, step-into debuggability, and compile-time safety.**
 
@@ -51,6 +53,7 @@ Traditional mediator implementations often rely on runtime reflection to discove
 *   Request/Response messages (`IRequest<TResponse>`, `IRequestHandler<TRequest, TResponse>`)
 *   Notification messages (`INotification`, `INotificationHandler<TNotification>`)
 *   Pipeline Behaviors (`IPipelineBehavior<TRequest, TResponse>`) for cross-cutting concerns.
+*   Native support for Result pattern (e.g. [FluentResults](https://github.com/altmann/FluentResults)).
 *   Flexible Pipeline Behavior Ordering via `[PipelineBehaviorOrder(int order)]`.
 *   Pipeline Behavior Constraints using standard C# generic constraints (`where TRequest : ...`).
 *   Explicit Notification Handler Ordering via DI configuration.
