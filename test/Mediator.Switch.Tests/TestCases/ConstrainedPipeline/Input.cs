@@ -21,11 +21,12 @@ public class SpecialProcessRequestHandler : IRequestHandler<SpecialProcessReques
 
 // A generic behavior that applies to all requests
 public class GenericLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine($"Generic Log: Start {typeof(TRequest).Name}");
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine($"Generic Log: End {typeof(TRequest).Name}");
         return response;
     }
@@ -35,11 +36,11 @@ public class GenericLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
 public class SpecialProcessingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : ISpecialProcessingRequired // Constraint
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine($"Special Behavior: Applying special processing to {typeof(TRequest).Name}");
         // Add some "processing" delay or modification if needed for testing runtime
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine($"Special Behavior: Finished special processing");
         return response;
     }

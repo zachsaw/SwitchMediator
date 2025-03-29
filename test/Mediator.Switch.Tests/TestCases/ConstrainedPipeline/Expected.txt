@@ -66,15 +66,15 @@ public class SwitchMediator : IMediator
 
     private async Task<System.Guid> HandleSpecialProcessRequestWithBehaviors(Test.Constrained.SpecialProcessRequest request)
     {
-        return await _test_Constrained_GenericLoggingBehavior__test_Constrained_SpecialProcessRequest.Handle(request, async req1 =>
-            await _test_Constrained_SpecialProcessingBehavior__test_Constrained_SpecialProcessRequest.Handle(req1, async req2 =>
-            await _test_Constrained_SpecialProcessRequestHandler.Handle(req2)));
+        return await _test_Constrained_SpecialProcessingBehavior__test_Constrained_SpecialProcessRequest.Handle(request, async () =>
+            await _test_Constrained_GenericLoggingBehavior__test_Constrained_SpecialProcessRequest.Handle(request, async () =>
+            await _test_Constrained_SpecialProcessRequestHandler.Handle(request)));
     }
 
     private async Task<int> HandleNormalRequestWithBehaviors(Test.Constrained.NormalRequest request)
     {
-        return await _test_Constrained_GenericLoggingBehavior__test_Constrained_NormalRequest.Handle(request, async req =>
-            await _test_Constrained_NormalRequestHandler.Handle(req));
+        return await _test_Constrained_GenericLoggingBehavior__test_Constrained_NormalRequest.Handle(request, async () =>
+            await _test_Constrained_NormalRequestHandler.Handle(request));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -5,10 +5,12 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public class CodeGenerator
 {
+    private readonly Compilation _compilation;
     private readonly INamedTypeSymbol _orderAttributeSymbol;
 
     public CodeGenerator(Compilation compilation)
     {
+        _compilation = compilation;
         _orderAttributeSymbol =
             compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorOrderAttribute") ??
             throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorOrderAttribute.");
@@ -20,43 +22,43 @@ public class CodeGenerator
         List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
         List<ITypeSymbol> notifications)
     {
+        var requestBehaviors = requests.Select(request => (Request: request, Behaviors: behaviors.Where(b =>
+            BehaviorApplicabilityChecker.IsApplicable(_compilation, b, request.Class, request.TResponse)).ToList())).ToList();
+
         // Generate fields
         var handlerFields = handlers.Select(h => $"private readonly {h.Class} _{h.Class.GetVariableName()};");
 
         // Generate behavior fields specific to each request, respecting constraints
-        var behaviorFields = new List<string>();
-        foreach (var request in requests)
+        var behaviorFields = requestBehaviors.SelectMany(r =>
         {
-            var applicableBehaviors = behaviors.Where(b => BehaviorApplicabilityChecker.IsApplicable(b, request.Class, request.TResponse));
-            behaviorFields.AddRange(applicableBehaviors.Select(b =>
-                $"private readonly {b.Class.ToString().DropGenerics()}<{request.Class}, {request.TResponse}> _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};"));
-        }
-
+            var (request, applicableBehaviors) = r;
+            return applicableBehaviors.Select(b =>
+                $"private readonly {b.Class.ToString().DropGenerics()}<{request.Class}, {request.TResponse}> _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
+        });
+        
         var notificationHandlerFields = notifications.Select(n =>
             $"private readonly IEnumerable<INotificationHandler<{n}>> _{n.GetVariableName()}__Handlers;");
 
         // Generate constructor parameters
         var constructorParams = handlers.Select(h => $"{h.Class} {h.Class.GetVariableName()}");
-        var behaviorParams = new List<string>();
-        foreach (var request in requests)
+        var behaviorParams = requestBehaviors.SelectMany(r =>
         {
-            var applicableBehaviors = behaviors.Where(b => BehaviorApplicabilityChecker.IsApplicable(b, request.Class, request.TResponse));
-            behaviorParams.AddRange(applicableBehaviors.Select(b =>
-                $"{b.Class.ToString().DropGenerics()}<{request.Class}, {request.TResponse}> {b.Class.GetVariableName()}__{request.Class.GetVariableName()}"));
-        }
+            var (request, applicableBehaviors) = r;
+            return applicableBehaviors.Select(b =>
+                $"{b.Class.ToString().DropGenerics()}<{request.Class}, {request.TResponse}> {b.Class.GetVariableName()}__{request.Class.GetVariableName()}");
+        });
         constructorParams = constructorParams.Concat(behaviorParams)
             .Concat(notifications.Select(n => $"IEnumerable<INotificationHandler<{n}>> {n.GetVariableName()}__Handlers"));
 
         // Generate constructor initializers
         var constructorInitializers = handlers.Select(h =>
             $"_{h.Class.GetVariableName()} = {h.Class.GetVariableName()};");
-        var behaviorInitializers = new List<string>();
-        foreach (var request in requests)
+        var behaviorInitializers = requestBehaviors.SelectMany(r =>
         {
-            var applicableBehaviors = behaviors.Where(b => BehaviorApplicabilityChecker.IsApplicable(b, request.Class, request.TResponse));
-            behaviorInitializers.AddRange(applicableBehaviors.Select(b =>
-                $"_{b.Class.GetVariableName()}__{request.Class.GetVariableName()} = {b.Class.GetVariableName()}__{request.Class.GetVariableName()};"));
-        }
+            var (request, applicableBehaviors) = r;
+            return applicableBehaviors.Select(b =>
+                $"_{b.Class.GetVariableName()}__{request.Class.GetVariableName()} = {b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
+        });
         constructorInitializers = constructorInitializers.Concat(behaviorInitializers)
             .Concat(notifications.Select(n =>
                 $"_{n.GetVariableName()}__Handlers = {n.GetVariableName()}__Handlers;"));
@@ -72,15 +74,15 @@ public class CodeGenerator
             }).Where(c => c != null);
 
         // Generate behavior chain methods
-        var behaviorMethods = requests.Select(r =>
+        var behaviorMethods = requestBehaviors.Select(r =>
         {
-            var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(r.Class, SymbolEqualityComparer.Default));
+            var (request, applicableBehaviors) = r;
+            var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(request.Class, SymbolEqualityComparer.Default));
             if (handler == default) return null;
-            var applicableBehaviors = behaviors.Where(b => BehaviorApplicabilityChecker.IsApplicable(b, r.Class, r.TResponse)).ToList();
             var orderedBehaviors = BehaviorOrderer.Order(applicableBehaviors, _orderAttributeSymbol);
-            var chain = BehaviorChainBuilder.Build(orderedBehaviors, r.Class.GetVariableName(), $"_{handler.Class.GetVariableName()}.Handle");
+            var chain = BehaviorChainBuilder.Build(orderedBehaviors, request.Class.GetVariableName(), $"_{handler.Class.GetVariableName()}.Handle");
             return $$"""
-                     private async Task<{{r.TResponse}}> Handle{{r.Class.Name}}WithBehaviors({{r.Class}} request)
+                     private async Task<{{request.TResponse}}> Handle{{request.Class.Name}}WithBehaviors({{request.Class}} request)
                          {
                              return {{chain}};
                          }

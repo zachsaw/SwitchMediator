@@ -15,4 +15,12 @@ public static class TypeSymbolExtensions
         }
         return false;
     }
+    
+    public static bool IsNullableValueType(this ITypeSymbol typeSymbol)
+    {
+        return typeSymbol.IsValueType &&
+               typeSymbol is INamedTypeSymbol { IsGenericType: true } namedType &&
+               SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition,
+                   namedType.ContainingAssembly?.GetTypeByMetadataName("System.Nullable`1"));
+    }
 }

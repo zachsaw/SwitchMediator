@@ -34,6 +34,11 @@ public static class Program
         var userResult = await sender.Send(userRequest);
         Console.WriteLine($"--> Result: {userResult}\n");
 
+        Console.WriteLine("--- Sending GetVersionRequest ---");
+        var versionRequest = new GetVersionRequest();
+        var versionResult = await sender.Send(versionRequest);
+        Console.WriteLine($"--> Result: {versionResult}\n");
+
         Console.WriteLine("--- Sending CreateOrderRequest ---");
         var orderRequest = new CreateOrderRequest("Book");
         var orderResult = await sender.Send(orderRequest);

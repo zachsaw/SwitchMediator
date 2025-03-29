@@ -80,11 +80,12 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 // Generic pipeline behaviors
 [PipelineBehaviorOrder(1)]
 public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine($"Logging: Handling {typeof(TRequest).Name}");
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine($"Logging: Handled {typeof(TRequest).Name}");
         return response;
     }
@@ -92,6 +93,7 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 
 [PipelineBehaviorOrder(2)]
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
     private readonly IValidator<TRequest>? _validator;
 
@@ -100,7 +102,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
         _validator = validator;
     }
 
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         if (_validator != null)
         {
@@ -110,7 +112,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
                 throw new ValidationException(result.Errors);
             }
         }
-        return await next(request);
+        return await next();
     }
 }
 
@@ -118,10 +120,10 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 public class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IAuditableRequest
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine($"Audit: Processing request at {request.Timestamp}");
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine($"Audit: Completed request at {request.Timestamp}");
         return response;
     }
@@ -130,10 +132,10 @@ public class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TR
 public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : ITransactionalRequest
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine($"Transaction: Starting with ID {request.TransactionId}");
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine($"Transaction: Completed with ID {request.TransactionId}");
         return response;
     }

@@ -17,6 +17,7 @@ public interface IRequest<out TResponse>;
 public interface INotification;
 
 public interface IRequestHandler<in TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
 {
     Task<TResponse> Handle(TRequest request);
 }
@@ -26,12 +27,14 @@ public interface INotificationHandler<in TNotification>
     Task Handle(TNotification notification);
 }
 
-public interface IPipelineBehavior<TRequest, TResponse>
+public delegate Task<TResponse> RequestHandlerDelegate<TResponse>();
+
+public interface IPipelineBehavior<in TRequest, TResponse> where TRequest : notnull
 {
-    Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next);
+    Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next);
 }
 
-[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class PipelineBehaviorOrderAttribute : Attribute
 {
     public int Order { get; }
@@ -39,5 +42,16 @@ public sealed class PipelineBehaviorOrderAttribute : Attribute
     public PipelineBehaviorOrderAttribute(int order)
     {
         Order = order;
+    }
+}
+
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class PipelineBehaviorResponseAdapterAttribute : Attribute
+{
+    public Type GenericsType { get; }
+
+    public PipelineBehaviorResponseAdapterAttribute(Type genericsType)
+    {
+        GenericsType = genericsType;
     }
 }
