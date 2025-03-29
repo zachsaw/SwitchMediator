@@ -4,13 +4,12 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class BehaviorApplicabilityChecker
 {
-    public static bool IsApplicable(
-        Compilation compilation,
-        (ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters) behavior,
+    public static bool IsApplicable(Compilation compilation,
+        IReadOnlyList<ITypeParameterSymbol> behaviorTypeParameters,
         ITypeSymbol requestType,
         ITypeSymbol responseType)
     {
-        return ConstraintChecker.IsConstraintSatisfied(compilation, behavior.TypeParameters[0], requestType) &&
-               ConstraintChecker.IsConstraintSatisfied(compilation, behavior.TypeParameters[1], responseType);
+        return ConstraintChecker.IsConstraintSatisfied(compilation, behaviorTypeParameters[0], requestType) &&
+               ConstraintChecker.IsConstraintSatisfied(compilation, behaviorTypeParameters[1], responseType);
     }
 }

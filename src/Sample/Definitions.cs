@@ -17,6 +17,7 @@ public interface ITransactionalRequest
 }
 
 // Request types
+[RequestHandler(typeof(GetUserRequestHandler))]
 public class GetUserRequest : IRequest<Result<string>>, IAuditableRequest
 {
     public int UserId { get; }
@@ -24,6 +25,7 @@ public class GetUserRequest : IRequest<Result<string>>, IAuditableRequest
     public GetUserRequest(int userId) => (UserId, Timestamp) = (userId, DateTime.Now);
 }
 
+[RequestHandler(typeof(CreateOrderRequestHandler))]
 public class CreateOrderRequest : IRequest<Result<int>>, ITransactionalRequest
 {
     public string Product { get; }
@@ -31,9 +33,9 @@ public class CreateOrderRequest : IRequest<Result<int>>, ITransactionalRequest
     public CreateOrderRequest(string product) => (Product, TransactionId) = (product, Guid.NewGuid());
 }
 
-public class GetVersionRequest : IRequest<Result<VersionedResponse>>, IAuditableRequest
+[RequestHandler(typeof(GetVersionRequestHandler))]
+public class GetVersionRequest : IRequest<Result<VersionedResponse>>
 {
-    public DateTime Timestamp { get; }
 }
 
 public class VersionedResponse : IVersionedResponse
@@ -136,8 +138,7 @@ public interface IVersionedResponse
     int Version { get; set; }
 }
 
-[PipelineBehaviorOrder(3)]
-[PipelineBehaviorResponseAdapter(typeof(Result<>))]
+[PipelineBehaviorOrder(3), PipelineBehaviorResponseAdaptor(typeof(Result<>))]
 public class AuditBehaviorInner<TRequest, TResponse> : IPipelineBehavior<TRequest, Result<TResponse>>
     where TRequest : IAuditableRequest
     where TResponse : IVersionedResponse
@@ -154,7 +155,6 @@ public class AuditBehaviorInner<TRequest, TResponse> : IPipelineBehavior<TReques
         Console.WriteLine($"Result = {versionedResponse.Version}");
         Console.WriteLine($"Audit: Completed request at {request.Timestamp}");
         return result;
-
     }
 }
 

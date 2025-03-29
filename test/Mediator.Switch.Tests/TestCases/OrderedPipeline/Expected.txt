@@ -20,19 +20,19 @@ namespace Mediator.Switch;
 public class SwitchMediator : IMediator
 {
     private readonly Test.Ordered.CalculationRequestHandler _test_Ordered_CalculationRequestHandler;
-    private readonly Test.Ordered.ValidationBehavior<Test.Ordered.CalculationRequest, int> _test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest;
     private readonly Test.Ordered.LoggingBehavior<Test.Ordered.CalculationRequest, int> _test_Ordered_LoggingBehavior__test_Ordered_CalculationRequest;
+    private readonly Test.Ordered.ValidationBehavior<Test.Ordered.CalculationRequest, int> _test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest;
     private readonly Test.Ordered.MonitoringBehavior<Test.Ordered.CalculationRequest, int> _test_Ordered_MonitoringBehavior__test_Ordered_CalculationRequest;
 
     public SwitchMediator(
         Test.Ordered.CalculationRequestHandler test_Ordered_CalculationRequestHandler,
-        Test.Ordered.ValidationBehavior<Test.Ordered.CalculationRequest, int> test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest,
         Test.Ordered.LoggingBehavior<Test.Ordered.CalculationRequest, int> test_Ordered_LoggingBehavior__test_Ordered_CalculationRequest,
+        Test.Ordered.ValidationBehavior<Test.Ordered.CalculationRequest, int> test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest,
         Test.Ordered.MonitoringBehavior<Test.Ordered.CalculationRequest, int> test_Ordered_MonitoringBehavior__test_Ordered_CalculationRequest)
     {
         _test_Ordered_CalculationRequestHandler = test_Ordered_CalculationRequestHandler;
-        _test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest = test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest;
         _test_Ordered_LoggingBehavior__test_Ordered_CalculationRequest = test_Ordered_LoggingBehavior__test_Ordered_CalculationRequest;
+        _test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest = test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest;
         _test_Ordered_MonitoringBehavior__test_Ordered_CalculationRequest = test_Ordered_MonitoringBehavior__test_Ordered_CalculationRequest;
     }
 

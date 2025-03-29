@@ -33,25 +33,3 @@ public interface IPipelineBehavior<in TRequest, TResponse> where TRequest : notn
 {
     Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next);
 }
-
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class PipelineBehaviorOrderAttribute : Attribute
-{
-    public int Order { get; }
-
-    public PipelineBehaviorOrderAttribute(int order)
-    {
-        Order = order;
-    }
-}
-
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class PipelineBehaviorResponseAdapterAttribute : Attribute
-{
-    public Type GenericsType { get; }
-
-    public PipelineBehaviorResponseAdapterAttribute(Type genericsType)
-    {
-        GenericsType = genericsType;
-    }
-}
