@@ -23,13 +23,14 @@ public class CalculationRequestHandler : IRequestHandler<CalculationRequest, int
 // Behavior with Order 2
 [PipelineBehaviorOrder(2)]
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine(" -> Behavior Order 2 (Validation) Start");
         // Simulate validation
         await Task.Delay(5); // Small delay
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine(" <- Behavior Order 2 (Validation) End");
         return response;
     }
@@ -38,11 +39,12 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 // Behavior with Order 1
 [PipelineBehaviorOrder(1)]
 public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine("-> Behavior Order 1 (Logging) Start");
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine("<- Behavior Order 1 (Logging) End");
         return response;
     }
@@ -50,11 +52,12 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 
 // Behavior with NO explicit order (should run after ordered ones by default)
 public class MonitoringBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
-    public async Task<TResponse> Handle(TRequest request, Func<TRequest, Task<TResponse>> next)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next)
     {
         Console.WriteLine("  -> Behavior Order Default (Monitoring) Start");
-        var response = await next(request);
+        var response = await next();
         Console.WriteLine("  <- Behavior Order Default (Monitoring) End");
         return response;
     }

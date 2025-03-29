@@ -85,18 +85,18 @@ public class SwitchMediator : IMediator
 
     private async Task<string> HandleGetUserRequestWithBehaviors(Test.FullPipeline.GetUserRequest request)
     {
-        return await _test_FullPipeline_LoggingBehavior__test_FullPipeline_GetUserRequest.Handle(request, async req1 =>
-            await _test_FullPipeline_ValidationBehavior__test_FullPipeline_GetUserRequest.Handle(req1, async req2 =>
-            await _test_FullPipeline_AuditBehavior__test_FullPipeline_GetUserRequest.Handle(req2, async req3 =>
-            await _test_FullPipeline_GetUserRequestHandler.Handle(req3))));
+        return await _test_FullPipeline_AuditBehavior__test_FullPipeline_GetUserRequest.Handle(request, async () =>
+            await _test_FullPipeline_ValidationBehavior__test_FullPipeline_GetUserRequest.Handle(request, async () =>
+            await _test_FullPipeline_LoggingBehavior__test_FullPipeline_GetUserRequest.Handle(request, async () =>
+            await _test_FullPipeline_GetUserRequestHandler.Handle(request))));
     }
 
     private async Task<int> HandleCreateOrderRequestWithBehaviors(Test.FullPipeline.CreateOrderRequest request)
     {
-        return await _test_FullPipeline_LoggingBehavior__test_FullPipeline_CreateOrderRequest.Handle(request, async req1 =>
-            await _test_FullPipeline_ValidationBehavior__test_FullPipeline_CreateOrderRequest.Handle(req1, async req2 =>
-            await _test_FullPipeline_TransactionBehavior__test_FullPipeline_CreateOrderRequest.Handle(req2, async req3 =>
-            await _test_FullPipeline_CreateOrderRequestHandler.Handle(req3))));
+        return await _test_FullPipeline_TransactionBehavior__test_FullPipeline_CreateOrderRequest.Handle(request, async () =>
+            await _test_FullPipeline_ValidationBehavior__test_FullPipeline_CreateOrderRequest.Handle(request, async () =>
+            await _test_FullPipeline_LoggingBehavior__test_FullPipeline_CreateOrderRequest.Handle(request, async () =>
+            await _test_FullPipeline_CreateOrderRequestHandler.Handle(request))));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

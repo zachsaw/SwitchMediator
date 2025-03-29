@@ -60,10 +60,10 @@ public class SwitchMediator : IMediator
 
     private async Task<int> HandleCalculationRequestWithBehaviors(Test.Ordered.CalculationRequest request)
     {
-        return await _test_Ordered_LoggingBehavior__test_Ordered_CalculationRequest.Handle(request, async req1 =>
-            await _test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest.Handle(req1, async req2 =>
-            await _test_Ordered_MonitoringBehavior__test_Ordered_CalculationRequest.Handle(req2, async req3 =>
-            await _test_Ordered_CalculationRequestHandler.Handle(req3))));
+        return await _test_Ordered_MonitoringBehavior__test_Ordered_CalculationRequest.Handle(request, async () =>
+            await _test_Ordered_ValidationBehavior__test_Ordered_CalculationRequest.Handle(request, async () =>
+            await _test_Ordered_LoggingBehavior__test_Ordered_CalculationRequest.Handle(request, async () =>
+            await _test_Ordered_CalculationRequestHandler.Handle(request))));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -20,6 +20,8 @@ public class SwitchMediatorSourceGeneratorTests : CSharpSourceGeneratorTest<Swit
     [InlineData("MultipleRequests")]
     [InlineData("PolymorphicRequests")]
     [InlineData("Notifications")]
+    [InlineData("BasicPipeline")]
+    [InlineData("BasicPipelineNestedType")]
     [InlineData("ConstrainedPipeline")]
     [InlineData("OrderedPipeline")]
     [InlineData("FullPipeline")]
