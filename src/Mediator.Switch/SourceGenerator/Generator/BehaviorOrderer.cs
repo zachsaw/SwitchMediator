@@ -4,9 +4,9 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class BehaviorOrderer
 {
-    public static List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Order(
-        List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
-        INamedTypeSymbol orderAttributeSymbol)
+    public static List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> OrderBy(
+        this IEnumerable<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
+        ITypeSymbol orderAttributeSymbol)
     {
         return behaviors
             .Select(behavior =>

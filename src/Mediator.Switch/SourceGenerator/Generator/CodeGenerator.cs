@@ -3,28 +3,13 @@ using Microsoft.CodeAnalysis;
 
 namespace Mediator.Switch.SourceGenerator.Generator;
 
-public class CodeGenerator
+public static class CodeGenerator
 {
-    private readonly Compilation _compilation;
-    private readonly INamedTypeSymbol _orderAttributeSymbol;
-
-    public CodeGenerator(Compilation compilation)
-    {
-        _compilation = compilation;
-        _orderAttributeSymbol =
-            compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorOrderAttribute") ??
-            throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorOrderAttribute.");
-    }
-
-    public string Generate(
-        List<(ITypeSymbol Class, ITypeSymbol TResponse)> requests,
+    public static string Generate(
         List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
-        List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
+        List<((ITypeSymbol Class, ITypeSymbol TResponse) Request, List<(ITypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> requestBehaviors,
         List<ITypeSymbol> notifications)
     {
-        var requestBehaviors = requests.Select(request => (Request: request, Behaviors: behaviors.Where(b =>
-            BehaviorApplicabilityChecker.IsApplicable(_compilation, b, request.Class, request.TResponse)).ToList())).ToList();
-
         // Generate fields
         var handlerFields = handlers.Select(h => $"private readonly {h.Class} _{h.Class.GetVariableName()};");
 
@@ -33,7 +18,7 @@ public class CodeGenerator
         {
             var (request, applicableBehaviors) = r;
             return applicableBehaviors.Select(b =>
-                $"private readonly {b.Class.ToString().DropGenerics()}<{request.Class}, {request.TResponse}> _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
+                $"private readonly {b.Class.ToString().DropGenerics()}<{request.Class}, {b.TResponse}> _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
         });
         
         var notificationHandlerFields = notifications.Select(n =>
@@ -45,7 +30,7 @@ public class CodeGenerator
         {
             var (request, applicableBehaviors) = r;
             return applicableBehaviors.Select(b =>
-                $"{b.Class.ToString().DropGenerics()}<{request.Class}, {request.TResponse}> {b.Class.GetVariableName()}__{request.Class.GetVariableName()}");
+                $"{b.Class.ToString().DropGenerics()}<{request.Class}, {b.TResponse}> {b.Class.GetVariableName()}__{request.Class.GetVariableName()}");
         });
         constructorParams = constructorParams.Concat(behaviorParams)
             .Concat(notifications.Select(n => $"IEnumerable<INotificationHandler<{n}>> {n.GetVariableName()}__Handlers"));
@@ -64,13 +49,13 @@ public class CodeGenerator
                 $"_{n.GetVariableName()}__Handlers = {n.GetVariableName()}__Handlers;"));
 
         // Generate Send method switch cases
-        var sendCases = requests
-            .OrderBy(r => r.Class, new TypeHierarchyComparer())
+        var sendCases = requestBehaviors
+            .OrderBy(r => r.Request.Class, new TypeHierarchyComparer())
             .Select(r =>
             {
-                var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(r.Class, SymbolEqualityComparer.Default));
+                var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(r.Request.Class, SymbolEqualityComparer.Default));
                 if (handler == default) return null;
-                return $"case {r.Class} {r.Class.GetVariableName()}:\n                return ToResponse<TResponse>(\n                    await Handle{r.Class.Name}WithBehaviors({r.Class.GetVariableName()}));";
+                return $"case {r.Request.Class} {r.Request.Class.GetVariableName()}:\n                return ToResponse<TResponse>(\n                    await Handle{r.Request.Class.Name}WithBehaviors({r.Request.Class.GetVariableName()}));";
             }).Where(c => c != null);
 
         // Generate behavior chain methods
@@ -79,8 +64,7 @@ public class CodeGenerator
             var (request, applicableBehaviors) = r;
             var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(request.Class, SymbolEqualityComparer.Default));
             if (handler == default) return null;
-            var orderedBehaviors = BehaviorOrderer.Order(applicableBehaviors, _orderAttributeSymbol);
-            var chain = BehaviorChainBuilder.Build(orderedBehaviors, request.Class.GetVariableName(), $"_{handler.Class.GetVariableName()}.Handle");
+            var chain = BehaviorChainBuilder.Build(applicableBehaviors, request.Class.GetVariableName(), $"_{handler.Class.GetVariableName()}.Handle");
             return $$"""
                      private async Task<{{request.TResponse}}> Handle{{request.Class.Name}}WithBehaviors({{request.Class}} request)
                          {
