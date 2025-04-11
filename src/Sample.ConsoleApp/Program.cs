@@ -11,7 +11,11 @@ public static class Program
     {
         var services = new ServiceCollection();
         services.AddValidatorsFromAssembly(typeof(Program).Assembly);
-        services.AddScoped<SwitchMediator>(typeof(Program).Assembly)
+        services.AddMediator<SwitchMediator>(op =>
+            {
+                op.TargetAssemblies = [typeof(Program).Assembly];
+                op.ServiceLifetime = ServiceLifetime.Singleton;
+            })
             .OrderNotificationHandlers<UserLoggedInEvent>(
                 typeof(UserLoggedInLogger),
                 typeof(UserLoggedInAnalytics)

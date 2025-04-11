@@ -5,16 +5,31 @@ namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddScoped<TSwitchMediator>(this IServiceCollection services, params Assembly[] assembliesToScan)
+        public static IServiceCollection AddMediator<TSwitchMediator>(this IServiceCollection services, params Assembly[] assembliesToScan)
             where TSwitchMediator : class, IMediator
         {
-            services.AddScoped<IMediator, TSwitchMediator>();
-            services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
-            services.AddScoped<IPublisher>(sp => sp.GetRequiredService<IMediator>());
+            return AddMediator<TSwitchMediator>(services, op =>
+            {
+                op.TargetAssemblies = assembliesToScan;
+                op.ServiceLifetime = ServiceLifetime.Scoped;
+            });
+        }
 
-            var allTypes = assembliesToScan
-                .Where(a => a != null)
-                .SelectMany(a => a.GetTypes())
+        public static IServiceCollection AddMediator<TSwitchMediator>(this IServiceCollection services, Action<SwitchMediatorOptions>? configure)
+            where TSwitchMediator : class, IMediator
+        {
+            var options = new SwitchMediatorOptions();
+            
+            if (configure != null)
+                configure(options);
+            
+            services.Add(new ServiceDescriptor(typeof(IMediator), typeof(TSwitchMediator), options.ServiceLifetime));
+            services.Add(new ServiceDescriptor(typeof(ISender), sp => sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
+            services.Add(new ServiceDescriptor(typeof(IPublisher), sp => sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
+
+            // get all types from the target assemblies
+            var allTypes = options.TargetAssemblies.Where(assembly => assembly != null)
+                .SelectMany(assembly => assembly.GetTypes())
                 .ToArray();
 
             // Register Handlers
@@ -25,7 +40,7 @@ namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection
 
             foreach (var handlerType in handlerTypes)
             {
-                services.AddScoped(handlerType);
+                services.Add(new ServiceDescriptor(handlerType, handlerType, options.ServiceLifetime));
             }
 
             // Register Notification Handlers (without explicit ordering initially)
@@ -37,13 +52,13 @@ namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection
             foreach (var handlerType in notificationHandlerTypes)
             {
                 // Register the concrete type
-                services.AddScoped(handlerType);
+				services.Add(new ServiceDescriptor(handlerType, handlerType, options.ServiceLifetime));
                 
                 // Also register against notification handler interfaces
                 foreach (var handlerInterface in handlerType.GetInterfaces()
                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(INotificationHandler<>)))
                 {
-                    services.AddScoped(handlerInterface, sp => sp.GetRequiredService(handlerType));
+					services.Add(new ServiceDescriptor(handlerInterface, sp => sp.GetRequiredService(handlerType), options.ServiceLifetime));
                 }
             }
 
@@ -55,7 +70,7 @@ namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection
 
             foreach (var behaviorType in pipelineBehaviorTypes)
             {
-                services.AddScoped(behaviorType);
+                services.Add(new ServiceDescriptor(behaviorType, behaviorType, options.ServiceLifetime));
             }
 
             return services;
@@ -64,12 +79,11 @@ namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection
         public static IServiceCollection OrderNotificationHandlers<TNotification>(this IServiceCollection services, params Type[] handlerTypes)
             where TNotification : INotification
         {
-            services.AddScoped<IEnumerable<INotificationHandler<TNotification>>>(sp =>
-            {
-                return handlerTypes
-                    .Select(handlerType => (INotificationHandler<TNotification>)sp.GetRequiredService(handlerType))
-                    .ToList();
-            });
+            services.Add(new ServiceDescriptor(typeof(IEnumerable<INotificationHandler<TNotification>>),
+                sp => handlerTypes.Select(handlerType
+                    => (INotificationHandler<TNotification>)sp.GetRequiredService(handlerType)).ToList(),
+                ServiceLifetime.Scoped));
+          
             return services;
         }
     }
