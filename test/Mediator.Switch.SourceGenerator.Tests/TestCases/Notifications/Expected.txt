@@ -96,9 +96,10 @@ public class SwitchMediator : IMediator
                 typeof(Tests.Notifications.OrderCreatedEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_Notifications_OrderCreatedEvent__Handlers);
+
                     foreach (var handler in handlers)
                     {
-                        await handler.Handle((Tests.Notifications.OrderCreatedEvent)notification, cancellationToken);
+                        /* Notification Handler */ await handler.Handle((Tests.Notifications.OrderCreatedEvent)notification, cancellationToken);
                     }
                 }
             )

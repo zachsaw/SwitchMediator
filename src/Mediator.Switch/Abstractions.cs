@@ -47,6 +47,13 @@ public interface IPipelineBehavior<in TRequest, TResponse> where TRequest : notn
     Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default);
 }
 
+public delegate Task NotificationHandlerDelegate();
+
+public interface INotificationPipelineBehavior<in TRequest> where TRequest : notnull
+{
+    Task Handle(TRequest request, NotificationHandlerDelegate next, CancellationToken cancellationToken = default);
+}
+
 public interface ISwitchMediatorServiceProvider
 {
     T Get<T>() where T : notnull;

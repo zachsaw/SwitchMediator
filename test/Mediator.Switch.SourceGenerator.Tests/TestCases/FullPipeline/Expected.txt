@@ -108,9 +108,10 @@ public class SwitchMediator : IMediator
                 typeof(Tests.FullPipeline.UserLoggedInEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_FullPipeline_UserLoggedInEvent__Handlers);
+
                     foreach (var handler in handlers)
                     {
-                        await handler.Handle((Tests.FullPipeline.UserLoggedInEvent)notification, cancellationToken);
+                        /* Notification Handler */ await handler.Handle((Tests.FullPipeline.UserLoggedInEvent)notification, cancellationToken);
                     }
                 }
             )
