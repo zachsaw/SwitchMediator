@@ -21,9 +21,6 @@ public class SemanticAnalyzer
     private readonly INamedTypeSymbol _orderAttributeSymbol;
     private readonly INamedTypeSymbol _requestHandlerAttributeSymbol;
 
-    public INamedTypeSymbol IRequestSymbol => _iRequestSymbol;
-    public INamedTypeSymbol INotificationSymbol => _iNotificationSymbol;
-
     public SemanticAnalyzer(Compilation compilation)
     {
         _compilation = compilation;
@@ -42,11 +39,7 @@ public class SemanticAnalyzer
         _requestHandlerAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.RequestHandlerAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.RequestHandlerAttribute");
     }
 
-    public (List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> Handlers,
-        List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> RequestBehaviors,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> NotificationHandlers,
-        List<ITypeSymbol> Notifications)
-        Analyze(List<TypeDeclarationSyntax> types, CancellationToken cancellationToken)
+    public SemanticAnalysis Analyze(List<TypeDeclarationSyntax> types, CancellationToken cancellationToken)
     {
         var requests = new List<(INamedTypeSymbol Class, ITypeSymbol TResponse)>();
         var handlers = new List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)>();
@@ -54,6 +47,7 @@ public class SemanticAnalyzer
         var notifications = new List<ITypeSymbol>();
         var notificationHandlers = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification)>();
 
+        // Analyze types discovered by the syntax receiver (these are source symbols from the current project)
         foreach (var typeSyntax in types)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -62,11 +56,37 @@ public class SemanticAnalyzer
             AnalyzeTypeSyntax(typeSyntax, cancellationToken, requests, handlers, behaviors, notifications, notificationHandlers);
         }
 
+        // Also analyze referenced assemblies so that handlers/requests defined in referenced projects (metadata references)
+        // are discovered and included in generation.
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            foreach (var reference in _compilation.References)
+            {
+                if (cancellationToken.IsCancellationRequested) break;
+
+                if (_compilation.GetAssemblyOrModuleSymbol(reference) is not IAssemblySymbol assemblySymbol) continue;
+
+                // Skip the current compilation's assembly (we already analyzed source types)
+                if (SymbolEqualityComparer.Default.Equals(assemblySymbol, _compilation.Assembly))
+                    continue;
+
+                CollectAndAnalyzeAssemblyTypes(assemblySymbol, cancellationToken, requests, handlers, behaviors, notifications, notificationHandlers);
+            }
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
         var requestBehaviors = ProcessRequestBehaviors(requests, behaviors);
 
-        return (handlers, requestBehaviors, notificationHandlers, notifications);
+        // Return a SemanticAnalysis record bundling the discovered symbols and results
+        return new SemanticAnalysis(
+            RequestSymbol: _iRequestSymbol,
+            NotificationSymbol: _iNotificationSymbol,
+            Handlers: handlers,
+            RequestBehaviors: requestBehaviors,
+            NotificationHandlers: notificationHandlers,
+            Notifications: notifications
+        );
     }
 
     private void AnalyzeTypeSyntax(
@@ -83,6 +103,20 @@ public class SemanticAnalyzer
         {
             return;
         }
+
+        AnalyzeTypeSymbol(typeSymbol, cancellationToken, requests, handlers, behaviors, notifications, notificationHandlers);
+    }
+
+    private void AnalyzeTypeSymbol(
+        INamedTypeSymbol typeSymbol,
+        CancellationToken cancellationToken,
+        List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors,
+        List<ITypeSymbol> notifications,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
+    {
+        if (cancellationToken.IsCancellationRequested) return;
 
         if (typeSymbol.IsAbstract || typeSymbol.IsUnboundGenericType)
         {
@@ -104,22 +138,76 @@ public class SemanticAnalyzer
         }
     }
 
+    private void CollectAndAnalyzeAssemblyTypes(
+        IAssemblySymbol assemblySymbol,
+        CancellationToken cancellationToken,
+        List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors,
+        List<ITypeSymbol> notifications,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
+    {
+        // Walk the assembly's namespace/type tree and analyze every named type we encounter.
+        void VisitNamespace(INamespaceSymbol ns)
+        {
+            if (cancellationToken.IsCancellationRequested) return;
+
+            foreach (var nestedNs in ns.GetNamespaceMembers())
+            {
+                VisitNamespace(nestedNs);
+            }
+
+            foreach (var type in ns.GetTypeMembers())
+            {
+                // We only care about named types (classes/records/structs). Analyze them directly.
+                AnalyzeTypeSymbol(type, cancellationToken, requests, handlers, behaviors, notifications, notificationHandlers);
+
+                // Also analyze nested types
+                foreach (var nested in type.GetTypeMembers())
+                {
+                    AnalyzeTypeSymbol(nested, cancellationToken, requests, handlers, behaviors, notifications, notificationHandlers);
+                }
+            }
+        }
+
+        VisitNamespace(assemblySymbol.GlobalNamespace);
+    }
+
+    private static bool OriginalDefinitionMatches(ITypeSymbol iface, INamedTypeSymbol target)
+    {
+        if (SymbolEqualityComparer.Default.Equals(iface.OriginalDefinition, target))
+            return true;
+
+        if (iface.OriginalDefinition is not INamedTypeSymbol ifaceDef) return false;
+
+        // Compare by metadata name and namespace as a fallback for metadata references
+        if (ifaceDef.MetadataName == target.MetadataName &&
+            ifaceDef.ContainingNamespace?.ToDisplayString() == target.ContainingNamespace?.ToDisplayString())
+            return true;
+
+        return false;
+    }
+
     private void TryAddRequest(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests)
     {
         var requestInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, _iRequestSymbol));
+            OriginalDefinitionMatches(i, _iRequestSymbol));
 
         if (requestInterface != null)
         {
             var tResponse = requestInterface.TypeArguments[0];
-            requests.Add((typeSymbol, tResponse));
+            // Avoid duplicates
+            if (!requests.Any(r => SymbolEqualityComparer.Default.Equals(r.Class, typeSymbol)))
+            {
+                requests.Add((typeSymbol, tResponse));
+            }
         }
     }
 
     private void TryAddRequestHandler(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers)
     {
         var handlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, _iRequestHandlerSymbol));
+            OriginalDefinitionMatches(i, _iRequestHandlerSymbol));
 
         foreach (var handlerInterface in handlerInterfaces)
         {
@@ -134,14 +222,18 @@ public class SemanticAnalyzer
 
             VerifyRequestMatchesHandler(typeSymbol, tRequest);
 
-            handlers.Add((typeSymbol, tRequest, tResponse));
+            // Avoid duplicates
+            if (!handlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TRequest, tRequest)))
+            {
+                handlers.Add((typeSymbol, tRequest, tResponse));
+            }
         }
     }
 
     private void TryAddPipelineBehavior(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors)
     {
         var behaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, _iPipelineBehaviorSymbol));
+            OriginalDefinitionMatches(i, _iPipelineBehaviorSymbol));
 
         if (behaviorInterface == null)
         {
@@ -211,13 +303,17 @@ public class SemanticAnalyzer
 
         var typeParameters = typeSymbol.TypeParameters;
         VerifyAdaptorMatchesTResponse(typeSymbol, interfaceTResponse); // Verify attribute if present (obsolete)
-        behaviors.Add((typeSymbol, interfaceTRequest, interfaceTResponse, typeParameters, wrapperType));
+        // Avoid duplicates
+        if (!behaviors.Any(b => SymbolEqualityComparer.Default.Equals(b.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(b.TRequest, interfaceTRequest) && SymbolEqualityComparer.Default.Equals(b.TResponse, interfaceTResponse)))
+        {
+            behaviors.Add((typeSymbol, interfaceTRequest, interfaceTResponse, typeParameters, wrapperType));
+        }
     }
 
     private void TryAddNotification(INamedTypeSymbol typeSymbol, List<ITypeSymbol> foundNotificationTypes)
     {
         var notificationInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, _iNotificationSymbol));
+            OriginalDefinitionMatches(i, _iNotificationSymbol));
 
         if (notificationInterface != null)
         {
@@ -232,7 +328,7 @@ public class SemanticAnalyzer
     private void TryAddNotificationHandler(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
     {
         var notificationHandlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, _iNotificationHandlerSymbol));
+            OriginalDefinitionMatches(i, _iNotificationHandlerSymbol));
 
         foreach (var notificationHandlerInterface in notificationHandlerInterfaces)
         {
@@ -242,7 +338,11 @@ public class SemanticAnalyzer
             var notification = notificationHandlerInterface.TypeArguments.FirstOrDefault();
             if (notification != null)
             {
-                notificationHandlers.Add((typeSymbol, notification));
+                // Avoid duplicates
+                if (!notificationHandlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TNotification, notification)))
+                {
+                    notificationHandlers.Add((typeSymbol, notification));
+                }
             }
         }
     }
@@ -304,7 +404,7 @@ public class SemanticAnalyzer
     private void VerifyRequestMatchesHandler(INamedTypeSymbol classSymbol, ITypeSymbol handledType)
     {
         var requestHandlerAttribute = handledType.GetAttributes()
-            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, _requestHandlerAttributeSymbol));
+            .FirstOrDefault(attr => attr.AttributeClass != null && OriginalDefinitionMatches(attr.AttributeClass, _requestHandlerAttributeSymbol));
 
         if (requestHandlerAttribute == null || requestHandlerAttribute.ConstructorArguments.Length == 0) return;
 
@@ -323,7 +423,7 @@ public class SemanticAnalyzer
     private void VerifyAdaptorMatchesTResponse(INamedTypeSymbol classSymbol, ITypeSymbol tResponse)
     {
         var responseTypeAdaptorAttribute = classSymbol.GetAttributes()
-            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, _responseAdaptorAttributeSymbol));
+            .FirstOrDefault(attr => attr.AttributeClass != null && OriginalDefinitionMatches(attr.AttributeClass, _responseAdaptorAttributeSymbol));
 
         if (responseTypeAdaptorAttribute == null) return;
 
@@ -342,25 +442,25 @@ public class SemanticAnalyzer
         if (responseTypeAdaptorAttribute.ConstructorArguments.Length != 1 ||
             responseTypeAdaptorAttribute.ConstructorArguments[0].Value is not INamedTypeSymbol typeArgSymbol)
         {
-             var syntaxReference = responseTypeAdaptorAttribute.ApplicationSyntaxReference;
-             throw new SourceGenerationException($"{AdaptorAttributeName} requires a single 'typeof(UnboundGeneric<>)' argument.",
-                     syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
+            var syntaxReference = responseTypeAdaptorAttribute.ApplicationSyntaxReference;
+            throw new SourceGenerationException($"{AdaptorAttributeName} requires a single 'typeof(UnboundGeneric<>)' argument.",
+                syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
         }
 
         if (!typeArgSymbol.IsUnboundGenericType || typeArgSymbol.TypeParameters.Length != 1)
         {
             var syntaxReference = responseTypeAdaptorAttribute.ApplicationSyntaxReference;
             throw new SourceGenerationException($"{AdaptorAttributeGenericsTypeName} must be an unbound generic type with 1 argument (e.g., typeof(Wrapper<>)).",
-                    syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
+                syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
         }
 
         return typeArgSymbol;
     }
-
+    
     private int GetOrder(ITypeSymbol typeSymbol)
     {
         var orderAttribute = typeSymbol.GetAttributes()
-            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, _orderAttributeSymbol));
+            .FirstOrDefault(attr => attr.AttributeClass != null && OriginalDefinitionMatches(attr.AttributeClass, _orderAttributeSymbol));
 
         return orderAttribute?.ConstructorArguments.Length > 0 && orderAttribute.ConstructorArguments[0].Value is int order
                ? order

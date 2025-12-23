@@ -1,0 +1,17 @@
+using Microsoft.CodeAnalysis;
+
+namespace Mediator.Switch.SourceGenerator;
+
+/// <summary>
+/// Aggregated semantic analysis results produced by <see cref="SemanticAnalyzer"/>.
+/// Moved out of the analyzer class so it can be shared and passed around as a single unit.
+/// </summary>
+public record SemanticAnalysis(
+    INamedTypeSymbol RequestSymbol,
+    INamedTypeSymbol NotificationSymbol,
+    List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> Handlers,
+    List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> RequestBehaviors,
+    List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> NotificationHandlers,
+    List<ITypeSymbol> Notifications
+);
+

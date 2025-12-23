@@ -197,7 +197,7 @@ public class SwitchMediatorBaselineUpdateTests
                 // Consider failing or adding alternative ways to get the reference if needed
             }
 
-            _metadataReferences = references.ToImmutableArray();
+            _metadataReferences = [..references];
             output.WriteLine($"Resolved {_metadataReferences.Value.Length} references.");
         }
     }

@@ -29,6 +29,7 @@
         <ProjectReference Include="..\Mediator.Switch\Mediator.Switch.csproj" />
         <ProjectReference Include="..\Mediator.Switch.Extensions.Microsoft.DependencyInjection\Mediator.Switch.Extensions.Microsoft.DependencyInjection.csproj" />
         <ProjectReference Include="..\Mediator.Switch.SourceGenerator\Mediator.Switch.SourceGenerator.csproj" OutputItemType="Analyzer" />
+        <ProjectReference Include="..\Mediator.Switch.Tests.Referenced\Mediator.Switch.Tests.Referenced.csproj" />
     </ItemGroup>
 
 </Project>
