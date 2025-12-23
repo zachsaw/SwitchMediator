@@ -40,6 +40,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{7B7A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Benchmark", "src\Mediator.Switch.Benchmark\Mediator.Switch.Benchmark.csproj", "{6EE020CB-FADC-41C0-81F9-83FA8724BC9C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Tests.Referenced", "src\Mediator.Switch.Tests.Referenced\Mediator.Switch.Tests.Referenced.csproj", "{DF08A605-9749-4C75-95FB-53CD57209D1E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -78,6 +80,10 @@ Global
 		{6EE020CB-FADC-41C0-81F9-83FA8724BC9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6EE020CB-FADC-41C0-81F9-83FA8724BC9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6EE020CB-FADC-41C0-81F9-83FA8724BC9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EFECD70B-6FDE-4BE5-9690-8669FE53204A} = {07C1945F-F0B2-4E76-927C-0105DABC0098}

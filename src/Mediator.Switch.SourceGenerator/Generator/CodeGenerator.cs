@@ -5,15 +5,15 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class CodeGenerator
 {
-    public static string Generate(
-        ITypeSymbol iRequestType,
-        ITypeSymbol iNotificationType,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
-        List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest,
-            ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> requestBehaviors,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers,
-        List<ITypeSymbol> notifications)
+    public static string Generate(SemanticAnalysis analysis)
     {
+        var iRequestType = analysis.RequestSymbol;
+        var iNotificationType = analysis.NotificationSymbol;
+        var handlers = analysis.Handlers;
+        var requestBehaviors = analysis.RequestBehaviors;
+        var notificationHandlers = analysis.NotificationHandlers;
+        var notifications = analysis.Notifications;
+
         var actualSendCases = requestBehaviors
             .OrderBy(r => r.Request.Class, new TypeHierarchyComparer(iRequestType, requestBehaviors.Select(r => r.Request.Class)))
             .Select(r => (r.Request, ActualRequest: TryGetActualRequest(iRequestType, handlers, r.Request)!))

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Mediator.Switch.Extensions.Microsoft.DependencyInjection;
+using Mediator.Switch.Tests.Referenced;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Mediator.Switch.Tests;
@@ -377,6 +378,48 @@ public class MediatorIntegrationTests : IDisposable
         Assert.Contains($"{nameof(MultiRequestTypeHandler)}::{nameof(ProcessDataCommand)}::{command.Data}", executedHandlers);
         Assert.Contains($"{nameof(MultiRequestTypeHandler)}::{nameof(CalculateValueQuery)}::{query.Input}", executedHandlers);
         Assert.Contains($"{nameof(MultiRequestTypeHandler)}::{nameof(GetConfigurationRequest)}::{configRequest.Key}", executedHandlers); // Optional
+    }
+
+    [Fact]
+    public async Task Send_ExternalGetUserRequest_FromReferencedProject_Works()
+    {
+        // Arrange
+        var request = new ExternalGetUserRequest(123);
+
+        // Act
+        var result = await _sender.Send(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(123, result.UserId);
+        Assert.Contains("User", result.Description);
+        Assert.Equal(51, result.Version);
+    }
+
+    [Fact]
+    public async Task Send_ExternalGetUserRequest_ReferencedHandler_HandlesMultipleRequests()
+    {
+        // Arrange
+        var req1 = new ExternalGetUserRequest(10);
+        var req2 = new ExternalGetUserRequest(20);
+
+        // Act - send both concurrently to ensure handler from referenced project is discovered and works under concurrency
+        var task1 = _sender.Send(req1);
+        var task2 = _sender.Send(req2);
+
+        var result1 = await task1;
+        var result2 = await task2;
+
+        // Assert
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.Equal(10, result1.UserId);
+        Assert.Equal(20, result2.UserId);
+        Assert.Contains("User", result1.Description);
+        Assert.Contains("User", result2.Description);
+        Assert.Equal(51, result1.Version);
+        Assert.Equal(51, result2.Version);
+        Assert.NotEqual(result1.Description, result2.Description);
     }
 
     public void Dispose()
