@@ -9,8 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Mediator.Switch\Mediator.Switch.csproj" />
+    <ProjectReference Include="..\..\src\Mediator.Switch\Mediator.Switch.csproj" />
   </ItemGroup>
 
 </Project>
-
