@@ -350,7 +350,7 @@ public static class CodeGenerator
     }
 
     private static string Normalize(string code) =>
-        string.Join(Environment.NewLine,
+        string.Join("\n",
             code.Replace("\r\n", "\n")
                 .Split('\n')
                 .Select(line => line.TrimEnd()));
