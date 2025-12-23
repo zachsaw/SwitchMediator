@@ -111,7 +111,7 @@ public class SwitchMediator : IMediator
 
                     foreach (var handler in handlers)
                     {
-                        /* Notification Handler */ await handler.Handle((Tests.FullPipeline.UserLoggedInEvent)notification, cancellationToken);
+                        await /* Notification Handler */ handler.Handle((Tests.FullPipeline.UserLoggedInEvent) notification, cancellationToken);
                     }
                 }
             )

@@ -23,15 +23,16 @@ public static class BehaviorChainBuilder
     public static string BuildNotification(
         List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
         string notificationName,
+        string notificationType,
         string coreHandler)
     {
-        var chain = $"/* Notification Handler */ await {coreHandler}";
+        var chain = $"/* Notification Handler */ {coreHandler}";
 
         return behaviors.Any()
             ? behaviors.Aggregate(
                 seed: chain,
                 func: (innerChain, behavior) =>
-                    $"await {behavior.Class.GetVariableName()}__{notificationName}.Handle(({notificationName})notification, ct => \n            {{ {innerChain.Replace("cancellationToken", "ct")}; }},\n            cancellationToken)"
+                    $"{behavior.Class.GetVariableName()}__{notificationName}.Handle(({notificationType}) notification, ct => \n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)"
             )
             : chain;
     }

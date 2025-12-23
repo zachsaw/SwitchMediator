@@ -129,7 +129,7 @@ public class SwitchMediator : IMediator
 
                     foreach (var handler in handlers)
                     {
-                        /* Notification Handler */ await handler.Handle((Tests.Polymorphics.OrderPlacedEvent)notification, cancellationToken);
+                        await /* Notification Handler */ handler.Handle((Tests.Polymorphics.OrderPlacedEvent) notification, cancellationToken);
                     }
                 }
             ),
@@ -140,7 +140,7 @@ public class SwitchMediator : IMediator
 
                     foreach (var handler in handlers)
                     {
-                        /* Notification Handler */ await handler.Handle((Tests.Polymorphics.UserCreatedEvent)notification, cancellationToken);
+                        await /* Notification Handler */ handler.Handle((Tests.Polymorphics.UserCreatedEvent) notification, cancellationToken);
                     }
                 }
             )

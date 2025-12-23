@@ -29,8 +29,9 @@ public class SwitchMediator : IMediator
 {
     #region Fields
 
-    private Tests.Notifications.SimpleRequestHandler? _tests_Notifications_SimpleRequestHandler;
-    private IEnumerable<INotificationHandler<Tests.Notifications.OrderCreatedEvent>>? _tests_Notifications_OrderCreatedEvent__Handlers;
+    private Tests.NotificationPipeline.ExceptionHandlingBehavior<Tests.NotificationPipeline.Alert>? _tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert;
+    private Tests.NotificationPipeline.LoggingNotificationBehavior<Tests.NotificationPipeline.Alert>? _tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert;
+    private IEnumerable<INotificationHandler<Tests.NotificationPipeline.Alert>>? _tests_NotificationPipeline_Alert__Handlers;
 
     private readonly ISwitchMediatorServiceProvider _svc;
 
@@ -64,11 +65,7 @@ public class SwitchMediator : IMediator
     {
         public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
         {
-            ( // case Tests.Notifications.SimpleRequest:
-                typeof(Tests.Notifications.SimpleRequest), (instance, request, cancellationToken) =>
-                    instance.Handle_Tests_Notifications_SimpleRequest(
-                        (Tests.Notifications.SimpleRequest) request, cancellationToken)
-            )
+
         }
 #if NET8_0_OR_GREATER
         .ToFrozenDictionary
@@ -92,14 +89,19 @@ public class SwitchMediator : IMediator
     {
         public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
         {
-            ( // case Tests.Notifications.OrderCreatedEvent:
-                typeof(Tests.Notifications.OrderCreatedEvent), async (instance, notification, cancellationToken) =>
+            ( // case Tests.NotificationPipeline.Alert:
+                typeof(Tests.NotificationPipeline.Alert), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_Notifications_OrderCreatedEvent__Handlers);
-
+                    var handlers = instance.Get(ref instance._tests_NotificationPipeline_Alert__Handlers);
+                    var tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert = instance.Get(ref instance._tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert);
+                var tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert = instance.Get(ref instance._tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert);
                     foreach (var handler in handlers)
                     {
-                        await /* Notification Handler */ handler.Handle((Tests.Notifications.OrderCreatedEvent) notification, cancellationToken);
+                        await tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert.Handle((Tests.NotificationPipeline.Alert) notification, ct =>
+            tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert.Handle((Tests.NotificationPipeline.Alert) notification, ct =>
+            /* Notification Handler */ handler.Handle((Tests.NotificationPipeline.Alert) notification, ct),
+            ct),
+            cancellationToken);
                     }
                 }
             )
@@ -112,16 +114,7 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    private Task<bool> Handle_Tests_Notifications_SimpleRequest(
-        Tests.Notifications.SimpleRequest request,
-        CancellationToken cancellationToken)
-    {
 
-        var tests_Notifications_SimpleRequestHandler = Get(ref _tests_Notifications_SimpleRequestHandler);
-
-        return
-            /* Request Handler */ tests_Notifications_SimpleRequestHandler.Handle(request, cancellationToken);
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
@@ -137,20 +130,21 @@ public class SwitchMediator : IMediator
     {
         public static readonly IReadOnlyList<Type> RequestHandlerTypes =
             new Type[] {
-                typeof(Tests.Notifications.SimpleRequestHandler)
+
             }.AsReadOnly();
 
         public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes =
            new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
-                (typeof(Tests.Notifications.OrderCreatedEvent), new Type[] {
-                    typeof(Tests.Notifications.OrderEmailNotifier),
-                    typeof(Tests.Notifications.OrderAnalyticsTracker)
+                (typeof(Tests.NotificationPipeline.Alert), new Type[] {
+                    typeof(Tests.NotificationPipeline.EmailAlertHandler),
+                    typeof(Tests.NotificationPipeline.SmsAlertHandler)
                 })
            }.AsReadOnly();
 
         public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
            new Type[] {
-
+                typeof(Tests.NotificationPipeline.ExceptionHandlingBehavior<Tests.NotificationPipeline.Alert>),
+                typeof(Tests.NotificationPipeline.LoggingNotificationBehavior<Tests.NotificationPipeline.Alert>)
            }.AsReadOnly();
     }
 }

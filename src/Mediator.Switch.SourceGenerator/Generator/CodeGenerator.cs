@@ -299,12 +299,13 @@ public static class CodeGenerator
             .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
 
         var notificationName = actualNotification.GetVariableName();
+        var notificationType = actualNotification.ToDisplayString();
 
         var behaviorResolutions = behaviors.Select(b =>
             $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
 
-        var coreCall = $"handler.Handle(({actualNotification})notification, cancellationToken)";
-        var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, coreCall);
+        var coreCall = $"handler.Handle(({notificationType}) notification, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, notificationType, coreCall);
 
         return $$"""
                       ( // case {{notification}}:
@@ -314,7 +315,7 @@ public static class CodeGenerator
                               {{string.Join("\n                ", behaviorResolutions)}}
                               foreach (var handler in handlers)
                               {
-                                  {{chain}};
+                                  await {{chain}};
                               }
                           }
                       )
