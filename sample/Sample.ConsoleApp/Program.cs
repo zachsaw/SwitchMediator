@@ -17,10 +17,16 @@ public static class Program
             {
                 op.KnownTypes = SwitchMediator.KnownTypes;
                 op.ServiceLifetime = ServiceLifetime.Singleton;
+
+                // Ordering for UserLoggedInEvent
                 op.OrderNotificationHandlers<UserLoggedInEvent>(
                     typeof(UserLoggedInLogger)
-                    // any other types not specified above is assumed to have lower priority
-                    // e.g., typeof(UserLoggedInAnalytics)
+                );
+
+                // Ordering for SystemAlert (Resilience Demo)
+                op.OrderNotificationHandlers<SystemAlert>(
+                    typeof(FailingSystemAlertHandler),
+                    typeof(LoggingSystemAlertHandler)
                 );
             });
 
@@ -60,6 +66,18 @@ public static class Program
         var loginEvent = new DerivedUserLoggedInEvent(123);
         await publisher.Publish(loginEvent);
         Console.WriteLine("--- Notification Published ---\n");
+
+        Console.WriteLine("--- Publishing SystemAlert (Resilience Demo) ---");
+        var alert = new SystemAlert("Database Latency High");
+        await publisher.Publish(alert);
+        Console.WriteLine("--- SystemAlert Published ---\n");
+
+        Console.WriteLine("--- Publishing UnstableServiceEvent (Retry Demo) ---");
+        // This demonstrates the Retry Notification Behavior.
+        // The handler is programmed to fail twice. The behavior will retry it until it succeeds on the 3rd try.
+        var retryEvent = new UnstableServiceEvent("JOB-9000");
+        await publisher.Publish(retryEvent);
+        Console.WriteLine("--- UnstableServiceEvent Published ---\n");
 
         Console.WriteLine("--- Sending GetUserRequest with Validation Failure ---");
         try
