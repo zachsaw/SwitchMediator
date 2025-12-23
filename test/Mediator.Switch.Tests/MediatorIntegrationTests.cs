@@ -422,6 +422,82 @@ public class MediatorIntegrationTests : IDisposable
         Assert.NotEqual(result1.Description, result2.Description);
     }
 
+    [Fact]
+    public async Task Publish_AlertNotification_RunsBehaviorsInCorrectOrder()
+    {
+        // Arrange
+        var notification = new AlertNotification("System Critical");
+        _notificationTracker.ExecutionOrder.Clear();
+
+        // Act
+        await _publisher.Publish(notification);
+
+        // Assert
+        // Expected flow: Outer Start -> Inner Start -> Handler -> Inner End -> Outer End
+        Assert.Equal(5, _notificationTracker.ExecutionOrder.Count);
+
+        var events = _notificationTracker.ExecutionOrder.ToArray();
+        Assert.Equal("Outer: Start", events[0]);
+        Assert.Equal("Inner: Start", events[1]);
+        Assert.Equal($"Handler: {notification.Message}", events[2]);
+        Assert.Equal("Inner: End", events[3]);
+        Assert.Equal("Outer: End", events[4]);
+    }
+
+    [Fact]
+    public async Task Publish_FragileNotification_ResilientBehaviorSwallowsException()
+    {
+        // Arrange
+        var notification = new FragileNotification();
+        _notificationTracker.ExecutionOrder.Clear();
+
+        // Act
+        // This should NOT throw because ResilientNotificationBehavior catches it
+        await _publisher.Publish(notification);
+
+        // Assert
+        Assert.Single(_notificationTracker.ExecutionOrder);
+        Assert.True(_notificationTracker.ExecutionOrder.TryDequeue(out var log));
+        Assert.Equal("Caught: Handler Boom!", log);
+    }
+
+    [Fact]
+    public async Task Publish_SecureNotification_RunsConstrainedBehavior()
+    {
+        // Arrange
+        var notification = new SecureNotification();
+        _notificationTracker.ExecutionOrder.Clear();
+
+        // Act
+        await _publisher.Publish(notification);
+
+        // Assert
+        // Should see the Security Audit log AND the handler log
+        Assert.Equal(2, _notificationTracker.ExecutionOrder.Count);
+
+        var events = _notificationTracker.ExecutionOrder.ToArray();
+        Assert.Equal("SecurityAudit: Checked", events[0]);
+        Assert.Equal("SecureHandler", events[1]);
+    }
+
+    [Fact]
+    public async Task Publish_PublicNotification_SkipsConstrainedBehavior()
+    {
+        // Arrange
+        var notification = new PublicNotification();
+        _notificationTracker.ExecutionOrder.Clear();
+
+        // Act
+        await _publisher.Publish(notification);
+
+        // Assert
+        // Should ONLY see the handler log, NO Security Audit log
+        Assert.Single(_notificationTracker.ExecutionOrder);
+
+        var events = _notificationTracker.ExecutionOrder.ToArray();
+        Assert.Equal("PublicHandler", events[0]);
+    }
+
     public void Dispose()
     {
         _scope.Dispose();

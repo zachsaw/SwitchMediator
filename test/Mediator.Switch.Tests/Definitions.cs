@@ -120,16 +120,11 @@ public class DogQueryHandler : IRequestHandler<DogQuery, string>
     }
 }
 
-public class GetUserRequestHandler : IRequestHandler<GetUserRequest, Result<User>>
+public class GetUserRequestHandler(IPublisher publisher) : IRequestHandler<GetUserRequest, Result<User>>
 {
-    private readonly IPublisher _publisher;
-
-    public GetUserRequestHandler(IPublisher publisher) =>
-        _publisher = publisher;
-
     public async Task<Result<User>> Handle(GetUserRequest request, CancellationToken cancellationToken = default)
     {
-        await _publisher.Publish(new UserLoggedInEvent(request.UserId), cancellationToken);
+        await publisher.Publish(new UserLoggedInEvent(request.UserId), cancellationToken);
         return new User
         {
             UserId = request.UserId,
@@ -321,5 +316,113 @@ public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         var response = await next(cancellationToken);
         Console.WriteLine($"Transaction: Completed with ID {request.TransactionId}");
         return response;
+    }
+}
+
+// --- NEW DEFINITIONS FOR NOTIFICATION PIPELINE TESTS ---
+
+// 1. Ordering Test Types
+public class AlertNotification(string message) : INotification
+{
+    public string Message { get; } = message;
+}
+
+public class AlertNotificationHandler(NotificationTracker tracker) : INotificationHandler<AlertNotification>
+{
+    public Task Handle(AlertNotification notification, CancellationToken cancellationToken)
+    {
+        tracker.ExecutionOrder.Enqueue($"Handler: {notification.Message}");
+        return Task.CompletedTask;
+    }
+}
+
+[PipelineBehaviorOrder(1)]
+public class OuterAlertBehavior<TNotification>(NotificationTracker tracker)
+    : INotificationPipelineBehavior<TNotification>
+    where TNotification : AlertNotification
+{
+    public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        tracker.ExecutionOrder.Enqueue("Outer: Start");
+        await next(cancellationToken);
+        tracker.ExecutionOrder.Enqueue("Outer: End");
+    }
+}
+
+[PipelineBehaviorOrder(2)]
+public class InnerAlertBehavior<TNotification>(NotificationTracker tracker)
+    : INotificationPipelineBehavior<TNotification>
+    where TNotification : AlertNotification
+{
+    public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        tracker.ExecutionOrder.Enqueue("Inner: Start");
+        await next(cancellationToken);
+        tracker.ExecutionOrder.Enqueue("Inner: End");
+    }
+}
+
+// 2. Resilience / Exception Handling Test Types
+public class FragileNotification : INotification;
+
+public class FragileNotificationHandler : INotificationHandler<FragileNotification>
+{
+    public Task Handle(FragileNotification notification, CancellationToken cancellationToken)
+    {
+        throw new InvalidOperationException("Handler Boom!");
+    }
+}
+
+public class ResilientNotificationBehavior<TNotification>(NotificationTracker tracker)
+    : INotificationPipelineBehavior<TNotification>
+    where TNotification : FragileNotification
+{
+    public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await next(cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            tracker.ExecutionOrder.Enqueue($"Caught: {ex.Message}");
+            // Exception is swallowed here
+        }
+    }
+}
+
+// 3. Constrained Behavior Test Types
+public interface ISecureNotification { }
+
+public class SecureNotification : INotification, ISecureNotification;
+public class PublicNotification : INotification;
+
+public class SecureHandler(NotificationTracker tracker) : INotificationHandler<SecureNotification>
+{
+    public Task Handle(SecureNotification notification, CancellationToken cancellationToken)
+    {
+        tracker.ExecutionOrder.Enqueue("SecureHandler");
+        return Task.CompletedTask;
+    }
+}
+
+public class PublicHandler(NotificationTracker tracker) : INotificationHandler<PublicNotification>
+{
+    public Task Handle(PublicNotification notification, CancellationToken cancellationToken)
+    {
+        tracker.ExecutionOrder.Enqueue("PublicHandler");
+        return Task.CompletedTask;
+    }
+}
+
+// This behavior should ONLY run for SecureNotification
+public class SecurityAuditBehavior<TNotification>(NotificationTracker tracker)
+    : INotificationPipelineBehavior<TNotification>
+    where TNotification : ISecureNotification
+{
+    public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        tracker.ExecutionOrder.Enqueue("SecurityAudit: Checked");
+        await next(cancellationToken);
     }
 }
