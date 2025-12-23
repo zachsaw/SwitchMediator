@@ -27,7 +27,7 @@ public class GenericLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"Generic Log: Start {typeof(TRequest).Name}");
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine($"Generic Log: End {typeof(TRequest).Name}");
         return response;
     }
@@ -41,7 +41,7 @@ public class SpecialProcessingBehavior<TRequest, TResponse> : IPipelineBehavior<
     {
         Console.WriteLine($"Special Behavior: Applying special processing to {typeof(TRequest).Name}");
         // Add some "processing" delay or modification if needed for testing runtime
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine("Special Behavior: Finished special processing");
         return response;
     }

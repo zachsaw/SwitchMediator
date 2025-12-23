@@ -294,19 +294,15 @@ public static class CodeGenerator
         ITypeSymbol notification,
         List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> notificationBehaviors)
     {
-        // Find behaviors applicable to this specific actualNotification
         var behaviors = notificationBehaviors
             .FirstOrDefault(nb => SymbolEqualityComparer.Default.Equals(nb.NotificationInfo.ActualNotification, actualNotification))
             .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
 
         var notificationName = actualNotification.GetVariableName();
 
-        // Generate code to resolve behaviors inside the method
         var behaviorResolutions = behaviors.Select(b =>
             $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
 
-        // Build the chain. The core is the handler call.
-        // We are inside a loop: foreach (var handler in handlers)
         var coreCall = $"handler.Handle(({actualNotification})notification, cancellationToken)";
         var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, coreCall);
 
@@ -334,7 +330,10 @@ public static class CodeGenerator
         var requestName = request.Class.GetVariableName();
         var chainVars = applicableBehaviors.Select(behavior => $"var {behavior.Class.GetVariableName()}__{requestName} = Get(ref _{behavior.Class.GetVariableName()}__{requestName});");
         var coreVar = $"var {handler.Class.GetVariableName()} = Get(ref _{handler.Class.GetVariableName()});";
-        var chain = BehaviorChainBuilder.Build(applicableBehaviors, requestName, $"{handler.Class.GetVariableName()}.Handle");
+
+        var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall);
+
         return $$"""
                  private Task<{{request.TResponse}}> Handle_{{request.Class.GetVariableName(false)}}(
                          {{request.Class}} request,

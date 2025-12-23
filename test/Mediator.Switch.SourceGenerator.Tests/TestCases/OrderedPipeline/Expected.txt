@@ -114,12 +114,12 @@ public class SwitchMediator : IMediator
         var tests_OrderedPipeline_CalculationRequestHandler = Get(ref _tests_OrderedPipeline_CalculationRequestHandler);
 
         return
-            tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, () =>
-            tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, () =>
-            tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, () =>
-            /* Request Handler */ tests_OrderedPipeline_CalculationRequestHandler.Handle(request, cancellationToken),
-            cancellationToken),
-            cancellationToken),
+            tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
+            tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
+            tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
+            /* Request Handler */ tests_OrderedPipeline_CalculationRequestHandler.Handle(request, ct),
+            ct),
+            ct),
             cancellationToken);
     }
 

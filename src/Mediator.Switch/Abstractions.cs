@@ -32,26 +32,26 @@ public interface INotification;
 public interface IRequestHandler<in TRequest, TResponse>
     where TRequest : IRequest<TResponse>
 {
-    Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken = default);
+    Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken);
 }
 
 public interface INotificationHandler<in TNotification>
 {
-    Task Handle(TNotification notification, CancellationToken cancellationToken = default);
+    Task Handle(TNotification notification, CancellationToken cancellationToken);
 }
 
-public delegate Task<TResponse> RequestHandlerDelegate<TResponse>();
+public delegate Task<TResponse> RequestHandlerDelegate<TResponse>(CancellationToken cancellationToken);
 
 public interface IPipelineBehavior<in TRequest, TResponse> where TRequest : notnull
 {
-    Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default);
+    Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken);
 }
 
-public delegate Task NotificationHandlerDelegate();
+public delegate Task NotificationHandlerDelegate(CancellationToken cancellationToken);
 
 public interface INotificationPipelineBehavior<in TRequest> where TRequest : notnull
 {
-    Task Handle(TRequest request, NotificationHandlerDelegate next, CancellationToken cancellationToken = default);
+    Task Handle(TRequest request, NotificationHandlerDelegate next, CancellationToken cancellationToken);
 }
 
 public interface ISwitchMediatorServiceProvider

@@ -110,8 +110,8 @@ public class SwitchMediator : IMediator
         var tests_BasicPipelineNestedType_PingHandler = Get(ref _tests_BasicPipelineNestedType_PingHandler);
 
         return
-            tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping.Handle(request, () =>
-            /* Request Handler */ tests_BasicPipelineNestedType_PingHandler.Handle(request, cancellationToken),
+            tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping.Handle(request, ct =>
+            /* Request Handler */ tests_BasicPipelineNestedType_PingHandler.Handle(request, ct),
             cancellationToken);
     }
 

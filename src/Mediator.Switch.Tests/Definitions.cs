@@ -251,7 +251,7 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"Logging: Handling {typeof(TRequest).Name}");
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine($"Logging: Handled {typeof(TRequest).Name}");
         return response;
     }
@@ -272,7 +272,7 @@ public class ValidationBehavior<TRequest, TResponse>(IValidator<TRequest>? valid
                 throw new ValidationException(result.Errors);
             }
         }
-        return await next();
+        return await next(cancellationToken);
     }
 }
 
@@ -283,7 +283,7 @@ public class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TR
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"Audit: Processing request at {request.Timestamp}");
-        var result = await next();
+        var result = await next(cancellationToken);
         Console.WriteLine($"Audit: Completed request at {request.Timestamp}");
         return result;
     }
@@ -297,7 +297,7 @@ public class VersionIncrementingBehavior<TRequest, TResponse> : IPipelineBehavio
     public async Task<Result<TResponse>> Handle(TRequest request, RequestHandlerDelegate<Result<TResponse>> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine("VersionTagging: Starting");
-        var result = await next();
+        var result = await next(cancellationToken);
         if (!result.IsSuccess)
             return result;
 
@@ -318,7 +318,7 @@ public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"Transaction: Starting with ID {request.TransactionId}");
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine($"Transaction: Completed with ID {request.TransactionId}");
         return response;
     }

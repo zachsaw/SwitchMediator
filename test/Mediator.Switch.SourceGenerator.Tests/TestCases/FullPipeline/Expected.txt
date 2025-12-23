@@ -134,12 +134,12 @@ public class SwitchMediator : IMediator
         var tests_FullPipeline_GetUserRequestHandler = Get(ref _tests_FullPipeline_GetUserRequestHandler);
 
         return
-            tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest.Handle(request, () =>
-            tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest.Handle(request, () =>
-            tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest.Handle(request, () =>
-            /* Request Handler */ tests_FullPipeline_GetUserRequestHandler.Handle(request, cancellationToken),
-            cancellationToken),
-            cancellationToken),
+            tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
+            tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
+            tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
+            /* Request Handler */ tests_FullPipeline_GetUserRequestHandler.Handle(request, ct),
+            ct),
+            ct),
             cancellationToken);
     }
 
@@ -153,12 +153,12 @@ public class SwitchMediator : IMediator
         var tests_FullPipeline_CreateOrderRequestHandler = Get(ref _tests_FullPipeline_CreateOrderRequestHandler);
 
         return
-            tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, () =>
-            tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, () =>
-            tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, () =>
-            /* Request Handler */ tests_FullPipeline_CreateOrderRequestHandler.Handle(request, cancellationToken),
-            cancellationToken),
-            cancellationToken),
+            tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
+            tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
+            tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
+            /* Request Handler */ tests_FullPipeline_CreateOrderRequestHandler.Handle(request, ct),
+            ct),
+            ct),
             cancellationToken);
     }
 

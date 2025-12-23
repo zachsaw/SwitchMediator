@@ -5,15 +5,17 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class BehaviorChainBuilder
 {
-    public static string Build(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors, string requestName, string coreHandler)
+    public static string BuildRequest(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
+        string requestName,
+        string coreHandler)
     {
-        var chain = $"/* Request Handler */ {coreHandler}(request, cancellationToken)";
+        var chain = $"/* Request Handler */ {coreHandler}";
         return behaviors.Any()
             ? behaviors
                 .Aggregate(
                     seed: chain,
                     func: (innerChain, behavior) =>
-                        $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, () => \n            {innerChain},\n            cancellationToken)"
+                        $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, ct => \n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)"
                 )
             : chain;
     }
@@ -29,7 +31,7 @@ public static class BehaviorChainBuilder
             ? behaviors.Aggregate(
                 seed: chain,
                 func: (innerChain, behavior) =>
-                    $"await {behavior.Class.GetVariableName()}__{notificationName}.Handle(({notificationName})notification, async (ct) => {{ {innerChain.Replace("cancellationToken", "ct")}; }}, cancellationToken)"
+                    $"await {behavior.Class.GetVariableName()}__{notificationName}.Handle(({notificationName})notification, ct => \n            {{ {innerChain.Replace("cancellationToken", "ct")}; }},\n            cancellationToken)"
             )
             : chain;
     }

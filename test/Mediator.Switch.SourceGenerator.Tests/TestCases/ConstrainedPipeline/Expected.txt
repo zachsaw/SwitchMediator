@@ -119,10 +119,10 @@ public class SwitchMediator : IMediator
         var tests_ConstrainedPipeline_SpecialProcessRequestHandler = Get(ref _tests_ConstrainedPipeline_SpecialProcessRequestHandler);
 
         return
-            tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, () =>
-            tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, () =>
-            /* Request Handler */ tests_ConstrainedPipeline_SpecialProcessRequestHandler.Handle(request, cancellationToken),
-            cancellationToken),
+            tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, ct =>
+            tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, ct =>
+            /* Request Handler */ tests_ConstrainedPipeline_SpecialProcessRequestHandler.Handle(request, ct),
+            ct),
             cancellationToken);
     }
 
@@ -134,8 +134,8 @@ public class SwitchMediator : IMediator
         var tests_ConstrainedPipeline_NormalRequestHandler = Get(ref _tests_ConstrainedPipeline_NormalRequestHandler);
 
         return
-            tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest.Handle(request, () =>
-            /* Request Handler */ tests_ConstrainedPipeline_NormalRequestHandler.Handle(request, cancellationToken),
+            tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest.Handle(request, ct =>
+            /* Request Handler */ tests_ConstrainedPipeline_NormalRequestHandler.Handle(request, ct),
             cancellationToken);
     }
 
