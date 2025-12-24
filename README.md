@@ -57,6 +57,13 @@ await next(); // Implicitly captured token, caused allocation
 await next(cancellationToken); // Explicit pass, zero allocation
 ```
 
+### 3. ⚠️ Breaking Change: `SwitchMediator` is now `internal`
+The generated `SwitchMediator` class is now `internal` instead of `public`.
+
+**Why?** This prevents type name conflicts when multiple projects in the same solution use the source generator (e.g., a `Core` project and a `Web` project). Each project now gets its own isolated mediator implementation.
+
+**Impact:** You must register the mediator (`services.AddMediator<SwitchMediator>...`) within the project where the source generator is running, or expose internals if your composition root is in a different assembly.
+
 ---
 
 ## Why SwitchMediator?

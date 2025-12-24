@@ -25,19 +25,19 @@ namespace Mediator.Switch;
 
 #pragma warning disable CS1998
 
-public class SwitchMediator : IMediator
+internal class SwitchMediator : IMediator
 {
     #region Fields
 
-    private Tests.FullPipeline.GetUserRequestHandler? _tests_FullPipeline_GetUserRequestHandler;
-    private Tests.FullPipeline.CreateOrderRequestHandler? _tests_FullPipeline_CreateOrderRequestHandler;
-    private Tests.FullPipeline.AuditBehavior<Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest;
-    private Tests.FullPipeline.ValidationBehavior<Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest;
-    private Tests.FullPipeline.LoggingBehavior<Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest;
-    private Tests.FullPipeline.TransactionBehavior<Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest;
-    private Tests.FullPipeline.ValidationBehavior<Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest;
-    private Tests.FullPipeline.LoggingBehavior<Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest;
-    private IEnumerable<INotificationHandler<Tests.FullPipeline.UserLoggedInEvent>>? _tests_FullPipeline_UserLoggedInEvent__Handlers;
+    private global::Tests.FullPipeline.GetUserRequestHandler? _tests_FullPipeline_GetUserRequestHandler;
+    private global::Tests.FullPipeline.CreateOrderRequestHandler? _tests_FullPipeline_CreateOrderRequestHandler;
+    private global::Tests.FullPipeline.AuditBehavior<global::Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest;
+    private global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest;
+    private global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest;
+    private global::Tests.FullPipeline.TransactionBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest;
+    private global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest;
+    private global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest;
+    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.FullPipeline.UserLoggedInEvent>>? _tests_FullPipeline_UserLoggedInEvent__Handlers;
 
     private readonly ISwitchMediatorServiceProvider _svc;
 
@@ -52,34 +52,34 @@ public class SwitchMediator : IMediator
 
     #endregion
 
-    public static (IReadOnlyList<Type> RequestHandlerTypes, IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes, IReadOnlyList<Type> PipelineBehaviorTypes) KnownTypes
+    public static (global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes, global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes, global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes) KnownTypes
     {
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
-    public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
         {
-            return (Task<TResponse>)handle(this, request, cancellationToken);
+            return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
         }
 
-        throw new ArgumentException($"No handler for {request.GetType().Name}");
+        throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
     }
 
     private static class SendSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
         {
             ( // case Tests.FullPipeline.CreateOrderRequest:
-                typeof(Tests.FullPipeline.CreateOrderRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.FullPipeline.CreateOrderRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_FullPipeline_CreateOrderRequest(
-                        (Tests.FullPipeline.CreateOrderRequest) request, cancellationToken)
+                        (global::Tests.FullPipeline.CreateOrderRequest) request, cancellationToken)
             ),
             ( // case Tests.FullPipeline.GetUserRequest:
-                typeof(Tests.FullPipeline.GetUserRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.FullPipeline.GetUserRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_FullPipeline_GetUserRequest(
-                        (Tests.FullPipeline.GetUserRequest) request, cancellationToken)
+                        (global::Tests.FullPipeline.GetUserRequest) request, cancellationToken)
             )
         }
 #if NET8_0_OR_GREATER
@@ -90,28 +90,31 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    public Task Publish(INotification notification, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
         {
             return handle(this, notification, cancellationToken);
         }
 
-        return Task.CompletedTask;
+        return global::System.Threading.Tasks.Task.CompletedTask;
     }
 
     private static class PublishSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
         {
             ( // case Tests.FullPipeline.UserLoggedInEvent:
-                typeof(Tests.FullPipeline.UserLoggedInEvent), async (instance, notification, cancellationToken) =>
+                typeof(global::Tests.FullPipeline.UserLoggedInEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_FullPipeline_UserLoggedInEvent__Handlers);
 
+                    var typedNotification = (global::Tests.FullPipeline.UserLoggedInEvent) notification;
+
                     foreach (var handler in handlers)
                     {
-                        await /* Notification Handler */ handler.Handle((Tests.FullPipeline.UserLoggedInEvent) notification, cancellationToken);
+                        await
+                            /* Notification Handler */ handler.Handle(typedNotification, cancellationToken);
                     }
                 }
             )
@@ -124,9 +127,9 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    private Task<string> Handle_Tests_FullPipeline_GetUserRequest(
-        Tests.FullPipeline.GetUserRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<string> Handle_Tests_FullPipeline_GetUserRequest(
+        global::Tests.FullPipeline.GetUserRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
         var tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest = Get(ref _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest);
         var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest = Get(ref _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest);
@@ -143,9 +146,9 @@ public class SwitchMediator : IMediator
             cancellationToken);
     }
 
-    private Task<int> Handle_Tests_FullPipeline_CreateOrderRequest(
-        Tests.FullPipeline.CreateOrderRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<int> Handle_Tests_FullPipeline_CreateOrderRequest(
+        global::Tests.FullPipeline.CreateOrderRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
         var tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest = Get(ref _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest);
         var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest = Get(ref _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest);
@@ -174,28 +177,28 @@ public class SwitchMediator : IMediator
     /// </summary>
     public static class SwitchMediatorKnownTypes
     {
-        public static readonly IReadOnlyList<Type> RequestHandlerTypes =
-            new Type[] {
-                typeof(Tests.FullPipeline.GetUserRequestHandler),
-                typeof(Tests.FullPipeline.CreateOrderRequestHandler)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
+            new global::System.Type[] {
+                typeof(global::Tests.FullPipeline.GetUserRequestHandler),
+                typeof(global::Tests.FullPipeline.CreateOrderRequestHandler)
             }.AsReadOnly();
 
-        public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes =
-           new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
-                (typeof(Tests.FullPipeline.UserLoggedInEvent), new Type[] {
-                    typeof(Tests.FullPipeline.UserLoggedInLogger),
-                    typeof(Tests.FullPipeline.UserLoggedInAnalytics)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =
+           new (global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)[] {
+                (typeof(global::Tests.FullPipeline.UserLoggedInEvent), new global::System.Type[] {
+                    typeof(global::Tests.FullPipeline.UserLoggedInLogger),
+                    typeof(global::Tests.FullPipeline.UserLoggedInAnalytics)
                 })
            }.AsReadOnly();
 
-        public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
-           new Type[] {
-                typeof(Tests.FullPipeline.AuditBehavior<Tests.FullPipeline.GetUserRequest, string>),
-                typeof(Tests.FullPipeline.ValidationBehavior<Tests.FullPipeline.GetUserRequest, string>),
-                typeof(Tests.FullPipeline.LoggingBehavior<Tests.FullPipeline.GetUserRequest, string>),
-                typeof(Tests.FullPipeline.TransactionBehavior<Tests.FullPipeline.CreateOrderRequest, int>),
-                typeof(Tests.FullPipeline.ValidationBehavior<Tests.FullPipeline.CreateOrderRequest, int>),
-                typeof(Tests.FullPipeline.LoggingBehavior<Tests.FullPipeline.CreateOrderRequest, int>)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes =
+           new global::System.Type[] {
+                typeof(global::Tests.FullPipeline.AuditBehavior<global::Tests.FullPipeline.GetUserRequest, string>),
+                typeof(global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.GetUserRequest, string>),
+                typeof(global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.GetUserRequest, string>),
+                typeof(global::Tests.FullPipeline.TransactionBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>),
+                typeof(global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>),
+                typeof(global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>)
            }.AsReadOnly();
     }
 }

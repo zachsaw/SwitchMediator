@@ -25,13 +25,13 @@ namespace Mediator.Switch;
 
 #pragma warning disable CS1998
 
-public class SwitchMediator : IMediator
+internal class SwitchMediator : IMediator
 {
     #region Fields
 
-    private Tests.NotificationPipelineConstrained.AuditBehavior<Tests.NotificationPipelineConstrained.UserCreated>? _tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated;
-    private IEnumerable<INotificationHandler<Tests.NotificationPipelineConstrained.SystemTick>>? _tests_NotificationPipelineConstrained_SystemTick__Handlers;
-    private IEnumerable<INotificationHandler<Tests.NotificationPipelineConstrained.UserCreated>>? _tests_NotificationPipelineConstrained_UserCreated__Handlers;
+    private global::Tests.NotificationPipelineConstrained.AuditBehavior<global::Tests.NotificationPipelineConstrained.UserCreated>? _tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated;
+    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.NotificationPipelineConstrained.SystemTick>>? _tests_NotificationPipelineConstrained_SystemTick__Handlers;
+    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.NotificationPipelineConstrained.UserCreated>>? _tests_NotificationPipelineConstrained_UserCreated__Handlers;
 
     private readonly ISwitchMediatorServiceProvider _svc;
 
@@ -46,24 +46,24 @@ public class SwitchMediator : IMediator
 
     #endregion
 
-    public static (IReadOnlyList<Type> RequestHandlerTypes, IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes, IReadOnlyList<Type> PipelineBehaviorTypes) KnownTypes
+    public static (global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes, global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes, global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes) KnownTypes
     {
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
-    public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
         {
-            return (Task<TResponse>)handle(this, request, cancellationToken);
+            return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
         }
 
-        throw new ArgumentException($"No handler for {request.GetType().Name}");
+        throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
     }
 
     private static class SendSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
         {
 
         }
@@ -75,41 +75,47 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    public Task Publish(INotification notification, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
         {
             return handle(this, notification, cancellationToken);
         }
 
-        return Task.CompletedTask;
+        return global::System.Threading.Tasks.Task.CompletedTask;
     }
 
     private static class PublishSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
         {
             ( // case Tests.NotificationPipelineConstrained.SystemTick:
-                typeof(Tests.NotificationPipelineConstrained.SystemTick), async (instance, notification, cancellationToken) =>
+                typeof(global::Tests.NotificationPipelineConstrained.SystemTick), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_NotificationPipelineConstrained_SystemTick__Handlers);
 
+                    var typedNotification = (global::Tests.NotificationPipelineConstrained.SystemTick) notification;
+
                     foreach (var handler in handlers)
                     {
-                        await /* Notification Handler */ handler.Handle((Tests.NotificationPipelineConstrained.SystemTick) notification, cancellationToken);
+                        await
+                            /* Notification Handler */ handler.Handle(typedNotification, cancellationToken);
                     }
                 }
             ),
             ( // case Tests.NotificationPipelineConstrained.UserCreated:
-                typeof(Tests.NotificationPipelineConstrained.UserCreated), async (instance, notification, cancellationToken) =>
+                typeof(global::Tests.NotificationPipelineConstrained.UserCreated), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_NotificationPipelineConstrained_UserCreated__Handlers);
                     var tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated = instance.Get(ref instance._tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated);
+                    var typedNotification = (global::Tests.NotificationPipelineConstrained.UserCreated) notification;
+
                     foreach (var handler in handlers)
                     {
-                        await tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated.Handle((Tests.NotificationPipelineConstrained.UserCreated) notification, ct =>
-            /* Notification Handler */ handler.Handle((Tests.NotificationPipelineConstrained.UserCreated) notification, ct),
-            cancellationToken);
+                        await
+                            tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated.Handle(typedNotification, ct =>
+                            /* Notification Handler */ handler.Handle(typedNotification, ct),
+                            cancellationToken);
                     }
                 }
             )
@@ -136,24 +142,24 @@ public class SwitchMediator : IMediator
     /// </summary>
     public static class SwitchMediatorKnownTypes
     {
-        public static readonly IReadOnlyList<Type> RequestHandlerTypes =
-            new Type[] {
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
+            new global::System.Type[] {
 
             }.AsReadOnly();
 
-        public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes =
-           new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
-                (typeof(Tests.NotificationPipelineConstrained.SystemTick), new Type[] {
-                    typeof(Tests.NotificationPipelineConstrained.SystemTickHandler)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =
+           new (global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)[] {
+                (typeof(global::Tests.NotificationPipelineConstrained.SystemTick), new global::System.Type[] {
+                    typeof(global::Tests.NotificationPipelineConstrained.SystemTickHandler)
                 }),
-                (typeof(Tests.NotificationPipelineConstrained.UserCreated), new Type[] {
-                    typeof(Tests.NotificationPipelineConstrained.UserCreatedHandler)
+                (typeof(global::Tests.NotificationPipelineConstrained.UserCreated), new global::System.Type[] {
+                    typeof(global::Tests.NotificationPipelineConstrained.UserCreatedHandler)
                 })
            }.AsReadOnly();
 
-        public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
-           new Type[] {
-                typeof(Tests.NotificationPipelineConstrained.AuditBehavior<Tests.NotificationPipelineConstrained.UserCreated>)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes =
+           new global::System.Type[] {
+                typeof(global::Tests.NotificationPipelineConstrained.AuditBehavior<global::Tests.NotificationPipelineConstrained.UserCreated>)
            }.AsReadOnly();
     }
 }
