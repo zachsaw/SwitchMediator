@@ -18,6 +18,8 @@ public class SwitchMediatorSourceGeneratorTests : CSharpSourceGeneratorTest<Swit
     [InlineData("MultipleRequests")]
     [InlineData("Polymorphics")]
     [InlineData("Notifications")]
+    [InlineData("NotificationPipeline")]
+    [InlineData("NotificationPipelineConstrained")]
     [InlineData("BasicPipeline")]
     [InlineData("BasicPipelineNestedType")]
     [InlineData("BasicPipelineAdapted")]
@@ -43,7 +45,7 @@ public class SwitchMediatorSourceGeneratorTests : CSharpSourceGeneratorTest<Swit
     }
 
     private static string Normalize(string code) =>
-        string.Join(Environment.NewLine,
+        string.Join("\n",
             code.Replace("\r\n", "\n") // Normalize Windows endings
                 .Split('\n')
                 .Select(line => line.TrimEnd()));

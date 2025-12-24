@@ -51,6 +51,6 @@ public class GenericBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 {
     public async Task<Result<TResponse>> Handle(TRequest request, RequestHandlerDelegate<Result<TResponse>> next, CancellationToken cancellationToken = default)
     {
-        return await next();
+        return await next(cancellationToken);
     }
 }

@@ -6,7 +6,7 @@
 
 **SwitchMediator: A Blazing Fast, Source-Generated Mediator for .NET**
 
-SwitchMediator provides a high-performance (see [benchmark results](src/Mediator.Switch.Benchmark/benchmark_results.md) - **1688x** faster and **117x** less memory allocated on startup, and no performance regression even with >1000 request handlers) implementation of the mediator pattern, offering an API surface familiar to users of popular libraries like [MediatR](https://github.com/jbogard/MediatR). By leveraging **C# Source Generators**, SwitchMediator eliminates runtime reflection for handler discovery and dispatch, instead generating highly optimized `switch` statements at compile time (this is done using a static readonly FrozenDictionary that gets constructed at startup for O(1) execution regardless of the number of request / events you might have). We also want you to <em>**Switch**</em> your <em>**Mediator**</em> to ours, get it? 😉
+SwitchMediator provides a high-performance (see [benchmark results](benchmark/Mediator.Switch.Benchmark/benchmark_results.md) - **1688x** faster and **117x** less memory allocated on startup, and no performance regression even with >1000 request handlers) implementation of the mediator pattern, offering an API surface familiar to users of popular libraries like [MediatR](https://github.com/jbogard/MediatR). By leveraging **C# Source Generators**, SwitchMediator eliminates runtime reflection for handler discovery and dispatch, instead generating highly optimized `switch` statements at compile time (this is done using a static readonly FrozenDictionary that gets constructed at startup for O(1) execution regardless of the number of request / events you might have). We also want you to <em>**Switch**</em> your <em>**Mediator**</em> to ours, get it? 😉
 
 Aside from performance, SwitchMediator is first and foremost designed to overcome frequent community frustrations with MediatR, addressing factors that have hindered its wider adoption especially due to its less than ideal DX (developer experience).
 
@@ -16,6 +16,7 @@ Aside from performance, SwitchMediator is first and foremost designed to overcom
 
 ## Table of Contents
 
+*   [What's New in V2](#whats-new-in-v2)
 *   [Why SwitchMediator?](#why-switchmediator)
 *   [Key Advantages Over Reflection-Based Mediators](#key-advantages-over-reflection-based-mediators)
 *   [Features](#features)
@@ -23,8 +24,38 @@ Aside from performance, SwitchMediator is first and foremost designed to overcom
 *   [Usage Example](#usage-example)
     *   [DI Setup](#di-setup)
     *   [Sending Requests & Publishing Notifications](#sending-requests--publishing-notifications)
+    *   [Notification Pipelines (Resilience & Retries)](#notification-pipelines-resilience--retries)
     *   [Example Output](#example-output)
 *   [License](#license)
+
+---
+
+## What's New in V2
+
+### 1. Notification Pipeline Behaviors (`INotificationPipelineBehavior`)
+V2 introduces support for pipeline behaviors on Notifications.
+
+Since Requests have a single handler, the pipeline wraps that single execution path. However, Notifications are broadcast to multiple handlers. SwitchMediator wraps **each handler execution independently** in its own pipeline scope.
+
+This enables powerful patterns like **Resilience**: you can write a behavior that catches exceptions from a specific handler, logs them, and swallows them, ensuring that *other* handlers for the same notification still execute.
+
+**The Performance Advantage:**
+In reflection-based mediators, wrapping every single event handler in a chain of behaviors creates a massive amount of delegate allocations and closure overhead at runtime. **SwitchMediator generates this "Russian Doll" wrapping code at compile time.** This makes the pipeline structure effectively "free" at runtime—zero allocation overhead for the pipeline construction itself.
+
+### 2. ⚠️ Breaking Change: `next(cancellationToken)`
+To further optimize performance and reduce memory allocations, the signature for pipeline delegates has changed. You must now pass the `cancellationToken` explicitly to `next`.
+
+**Why?** This prevents the compiler from creating a closure to capture the `cancellationToken` from the outer scope, significantly reducing allocations in high-throughput scenarios.
+
+**Before (V1):**
+```csharp
+await next(); // Implicitly captured token, caused allocation
+```
+
+**After (V2):**
+```csharp
+await next(cancellationToken); // Explicit pass, zero allocation
+```
 
 ---
 
@@ -52,6 +83,7 @@ Traditional mediator implementations often rely on runtime reflection to discove
 *   Request/Response messages (`IRequest<TResponse>`, `IRequestHandler<TRequest, TResponse>`)
 *   Notification messages (`INotification`, `INotificationHandler<TNotification>`)
 *   Pipeline Behaviors (`IPipelineBehavior<TRequest, TResponse>`) for cross-cutting concerns.
+*   **[NEW]** Notification Pipeline Behaviors (`INotificationPipelineBehavior<TNotification>`) for per-handler middleware.
 *   Native support for Result pattern (e.g. [FluentResults](https://github.com/altmann/FluentResults)).
 *   Flexible Pipeline Behavior Ordering via `[PipelineBehaviorOrder(int order)]`.
 *   Pipeline Behavior Constraints using standard C# generic constraints (`where TRequest : ...`).
@@ -72,7 +104,7 @@ dotnet add package Mediator.Switch.Extensions.Microsoft.DependencyInjection
 
 ## Usage Example
 
-Refer to [Sample app](src/Sample.ConsoleApp) for more information.
+Refer to [Sample app](sample/Sample.ConsoleApp) for more information.
 
 ### DI Setup
 
@@ -152,6 +184,31 @@ public static async Task RunSample(ISender sender, IPublisher publisher)
     catch (FluentValidation.ValidationException ex)
     {
         Console.WriteLine($"--> Caught Expected ValidationException: {ex.Errors.FirstOrDefault()?.ErrorMessage}\n");
+    }
+}
+```
+
+### Notification Pipelines (Resilience & Retries)
+
+Demonstrates how to wrap notification handlers with middleware using `INotificationPipelineBehavior<TNotification>`.
+*   **Isolation:** Notification behaviors wrap *each individual handler execution*.
+*   **Resilience (Swallowing Exceptions):** For non-critical handlers, catch and log exceptions from a specific handler so others continue running.
+*   **Retries (Polly Integration):** Because the behavior wraps the handler, you can easily implement retry policies using libraries like Polly.
+
+**Example: Using Polly for Retries**
+```csharp
+public class PollyRetryBehavior<TNotification> : INotificationPipelineBehavior<TNotification>
+    where TNotification : IRetryableNotification
+{
+    // Define a simple retry policy (e.g., retry 3 times)
+    private readonly AsyncRetryPolicy _retryPolicy = Policy
+        .Handle<Exception>()
+        .RetryAsync(3);
+
+    public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        // Execute the handler (next) within the Polly policy
+        await _retryPolicy.ExecuteAsync(async (ct) => await next(ct), cancellationToken);
     }
 }
 ```

@@ -13,6 +13,7 @@ public static class CodeGenerator
         var requestBehaviors = analysis.RequestBehaviors;
         var notificationHandlers = analysis.NotificationHandlers;
         var notifications = analysis.Notifications;
+        var notificationBehaviors = analysis.NotificationBehaviors;
 
         var actualSendCases = requestBehaviors
             .OrderBy(r => r.Request.Class, new TypeHierarchyComparer(iRequestType, requestBehaviors.Select(r => r.Request.Class)))
@@ -33,17 +34,27 @@ public static class CodeGenerator
 
         // Generate fields
         var handlerFields = handlers
-            .Select(h => h.Class) // Get the class symbol for each handler entry
-            .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default) // Get unique handler classes
-            .Select(cls => $"private {cls}? _{cls.GetVariableName()};"); // Generate one field per class
+            .Select(h => h.Class)
+            .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
+            .Select(cls => $"private {cls}? _{cls.GetVariableName()};");
 
-        // Generate behavior fields specific to each request, respecting constraints
+        // Generate behavior fields specific to each request
         var behaviorFields = actualRequestBehaviors.SelectMany(r =>
         {
             var (request, applicableBehaviors) = r;
             return applicableBehaviors.Select(b =>
                 $"private {b.Class.ToString().DropGenerics()}<{request.Class}, {b.TResponse}>? _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
         });
+
+        // Generate behavior fields specific to each notification
+        var notificationBehaviorFields = notificationBehaviors
+            .Where(nb => usedNotifications.Contains(nb.NotificationInfo.ActualNotification))
+            .SelectMany(nb =>
+            {
+                var actualNotif = nb.NotificationInfo.ActualNotification;
+                return nb.Behaviors.Select(b =>
+                    $"private {b.Class.ToString().DropGenerics()}<{actualNotif}>? _{b.Class.GetVariableName()}__{actualNotif.GetVariableName()};");
+            });
 
         var notificationHandlerFields = usedNotifications.Select(n =>
             $"private IEnumerable<INotificationHandler<{n}>>? _{n.GetVariableName()}__Handlers;");
@@ -52,30 +63,41 @@ public static class CodeGenerator
         var sendCases = actualSendCases
             .Select(c => GenerateSendCase(c.ActualRequest, c.Request));
 
-        // Generate behavior chain methods
+        // Generate behavior chain methods for requests
         var behaviorMethods = actualRequestBehaviors
             .Select(r => TryGenerateBehaviorMethod(handlers, r))
             .Where(m => m != null);
 
         // Generate Publish method switch cases
         var publishCases = actualPublishCases
-            .Select(n => GeneratePublishCase(n.ActualNotification, n.Notification));
+            .Select(n => GeneratePublishCase(n.ActualNotification, n.Notification, notificationBehaviors));
 
         // Generate known types
         var requestHandlerTypes = handlers
             .Select(h => h.Class)
             .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
             .Select(cls => $"typeof({cls})");
+
         var notificationTypes = usedNotifications.Select(n =>
             $"(typeof({n}), new Type[] {{\n                    {string.Join(",\n                    ", notificationHandlers
                 .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
                 .Select(h => $"typeof({h.Class})"))}\n                }})");
+
         var pipelineBehaviorTypes = actualRequestBehaviors.SelectMany(r =>
         {
             var (request, applicableBehaviors) = r;
             return applicableBehaviors.Select(b =>
                 $"typeof({b.Class.ToString().DropGenerics()}<{request.Class}, {b.TResponse}>)");
         });
+
+        var notificationPipelineBehaviorTypes = notificationBehaviors
+            .Where(nb => usedNotifications.Contains(nb.NotificationInfo.ActualNotification))
+            .SelectMany(nb =>
+            {
+                var actualNotif = nb.NotificationInfo.ActualNotification;
+                return nb.Behaviors.Select(b =>
+                    $"typeof({b.Class.ToString().DropGenerics()}<{actualNotif}>)");
+            });
 
         // Generate the complete SwitchMediator class
         return Normalize(
@@ -111,7 +133,7 @@ public static class CodeGenerator
                {
                    #region Fields
                
-                   {{string.Join("\n    ", handlerFields.Concat(behaviorFields).Concat(notificationHandlerFields))}}
+                   {{string.Join("\n    ", handlerFields.Concat(behaviorFields).Concat(notificationBehaviorFields).Concat(notificationHandlerFields))}}
                
                    private readonly ISwitchMediatorServiceProvider _svc;
                
@@ -205,7 +227,7 @@ public static class CodeGenerator
                
                        public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
                           new Type[] {
-                               {{string.Join(",\n                ", pipelineBehaviorTypes)}}
+                               {{string.Join(",\n                ", pipelineBehaviorTypes.Concat(notificationPipelineBehaviorTypes))}}
                           }.AsReadOnly();
                    }    
                }
@@ -267,19 +289,38 @@ public static class CodeGenerator
         return null;
     }
 
-    private static string GeneratePublishCase(ITypeSymbol actualHandler, ITypeSymbol notification) =>
-        $$"""
+    private static string GeneratePublishCase(
+        ITypeSymbol actualNotification,
+        ITypeSymbol notification,
+        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> notificationBehaviors)
+    {
+        var behaviors = notificationBehaviors
+            .FirstOrDefault(nb => SymbolEqualityComparer.Default.Equals(nb.NotificationInfo.ActualNotification, actualNotification))
+            .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
+
+        var notificationName = actualNotification.GetVariableName();
+        var notificationType = actualNotification.ToDisplayString();
+
+        var behaviorResolutions = behaviors.Select(b =>
+            $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
+
+        var coreCall = $"handler.Handle(({notificationType}) notification, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, notificationType, coreCall);
+
+        return $$"""
                       ( // case {{notification}}:
                           typeof({{notification}}), async (instance, notification, cancellationToken) =>
                           {
-                              var handlers = instance.Get(ref instance._{{actualHandler.GetVariableName()}}__Handlers);
+                              var handlers = instance.Get(ref instance._{{actualNotification.GetVariableName()}}__Handlers);
+                              {{string.Join("\n                ", behaviorResolutions)}}
                               foreach (var handler in handlers)
                               {
-                                  await handler.Handle(({{notification}})notification, cancellationToken);
+                                  await {{chain}};
                               }
                           }
                       )
           """;
+    }
 
     private static string? TryGenerateBehaviorMethod(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
         ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors) r)
@@ -290,7 +331,10 @@ public static class CodeGenerator
         var requestName = request.Class.GetVariableName();
         var chainVars = applicableBehaviors.Select(behavior => $"var {behavior.Class.GetVariableName()}__{requestName} = Get(ref _{behavior.Class.GetVariableName()}__{requestName});");
         var coreVar = $"var {handler.Class.GetVariableName()} = Get(ref _{handler.Class.GetVariableName()});";
-        var chain = BehaviorChainBuilder.Build(applicableBehaviors, requestName, $"{handler.Class.GetVariableName()}.Handle");
+
+        var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall);
+
         return $$"""
                  private Task<{{request.TResponse}}> Handle_{{request.Class.GetVariableName(false)}}(
                          {{request.Class}} request,
@@ -306,8 +350,8 @@ public static class CodeGenerator
     }
 
     private static string Normalize(string code) =>
-        string.Join(Environment.NewLine,
-            code.Replace("\r\n", "\n") // Normalize Windows endings
+        string.Join("\n",
+            code.Replace("\r\n", "\n")
                 .Split('\n')
                 .Select(line => line.TrimEnd()));
 }

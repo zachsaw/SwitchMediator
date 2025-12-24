@@ -30,7 +30,7 @@ This sample application demonstrates various technical capabilities of the **Swi
     }
     ```
 
-*   **Handler Discovery via Attribute:** Uses the `[RequestHandler]` attribute on request types to link them to their specific handler implementation, allowing easy navigation within the IDE. Note that this attribute is recommended not mandatory. 
+*   **Handler Discovery via Attribute:** Uses the `[RequestHandler]` attribute on request types to link them to their specific handler implementation, allowing easy navigation within the IDE. Note that this attribute is recommended not mandatory.
 
     ```csharp
     [RequestHandler(typeof(GetUserRequestHandler))] // Request to handler discovery (optional but recommended to ease code navigation)
@@ -80,6 +80,29 @@ This sample application demonstrates various technical capabilities of the **Swi
             // ...
         }
         ```
+
+*   **Notification Pipeline Behaviors (Resilience & Retries):** Demonstrates how to wrap notification handlers with middleware using `INotificationPipelineBehavior<TNotification>`.
+    *   **Isolation:** Unlike request pipelines, notification behaviors wrap *each individual handler execution*.
+    *   **Resilience (Swallowing Exceptions):** Catch exceptions from a specific handler so others continue running.
+    *   **Retries (Polly Integration):** Because the behavior wraps the handler, you can easily implement retry policies using libraries like Polly.
+
+    **Example: Using Polly for Retries**
+    ```csharp
+    public class PollyRetryBehavior<TNotification> : INotificationPipelineBehavior<TNotification>
+        where TNotification : IRetryableNotification
+    {
+        // Define a simple retry policy (e.g., retry 3 times)
+        private readonly AsyncRetryPolicy _retryPolicy = Policy
+            .Handle<Exception>()
+            .RetryAsync(3);
+
+        public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+        {
+            // Execute the handler (next) within the Polly policy
+            await _retryPolicy.ExecuteAsync(async (ct) => await next(ct), cancellationToken);
+        }
+    }
+    ```
 
 *   **FluentValidation Integration:** The `ValidationBehavior` seamlessly integrates with FluentValidation by resolving `IValidator<TRequest>` from the DI container and executing validation within the pipeline. Registration is simplified using extension methods.
 

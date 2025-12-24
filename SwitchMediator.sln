@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.ConsoleApp", "src\Sample.ConsoleApp\Sample.ConsoleApp.csproj", "{AC9E0690-6326-4AF5-B067-DF4BC6E1E8CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.ConsoleApp", "sample\Sample.ConsoleApp\Sample.ConsoleApp.csproj", "{AC9E0690-6326-4AF5-B067-DF4BC6E1E8CA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.SourceGenerator", "src\Mediator.Switch.SourceGenerator\Mediator.Switch.SourceGenerator.csproj", "{38F93217-BFA4-48AC-90FE-F325F3B6A0E6}"
 EndProject
@@ -11,8 +11,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".scripts", ".scripts", "{268F0EF8-7191-49BF-874B-C5E7D0E7E02F}"
 	ProjectSection(SolutionItems) = preProject
 		scripts\publish.sh = scripts\publish.sh
-		src\run_benchmarks.sh = src\run_benchmarks.sh
-		src\run_benchmarks.bat = src\run_benchmarks.bat
+		benchmark\run_benchmarks.sh = benchmark\run_benchmarks.sh
+		benchmark\run_benchmarks.bat = benchmark\run_benchmarks.bat
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch", "src\Mediator.Switch\Mediator.Switch.csproj", "{CAF19E98-2C50-4B9D-B15D-F73606FBFE8E}"
@@ -30,17 +30,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".docs", ".docs", "{AD6BCB6E
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Tests", "src\Mediator.Switch.Tests\Mediator.Switch.Tests.csproj", "{B955FBC2-21BF-441C-8157-CEA69C9503B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Tests", "test\Mediator.Switch.Tests\Mediator.Switch.Tests.csproj", "{B955FBC2-21BF-441C-8157-CEA69C9503B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Benchmark.Generator", "src\Mediator.Switch.Benchmark.Generator\Mediator.Switch.Benchmark.Generator.csproj", "{89E9E3D4-B09A-416D-9071-6B878E746659}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Benchmark.Generator", "benchmark\Mediator.Switch.Benchmark.Generator\Mediator.Switch.Benchmark.Generator.csproj", "{89E9E3D4-B09A-416D-9071-6B878E746659}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{43FD6F8E-2121-4BF4-AB73-8F43C82887A3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{7B7A5648-85F7-4DE9-8C4C-B43863530F5E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Benchmark", "src\Mediator.Switch.Benchmark\Mediator.Switch.Benchmark.csproj", "{6EE020CB-FADC-41C0-81F9-83FA8724BC9C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Benchmark", "benchmark\Mediator.Switch.Benchmark\Mediator.Switch.Benchmark.csproj", "{6EE020CB-FADC-41C0-81F9-83FA8724BC9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Tests.Referenced", "src\Mediator.Switch.Tests.Referenced\Mediator.Switch.Tests.Referenced.csproj", "{DF08A605-9749-4C75-95FB-53CD57209D1E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Tests.Referenced", "test\Mediator.Switch.Tests.Referenced\Mediator.Switch.Tests.Referenced.csproj", "{DF08A605-9749-4C75-95FB-53CD57209D1E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

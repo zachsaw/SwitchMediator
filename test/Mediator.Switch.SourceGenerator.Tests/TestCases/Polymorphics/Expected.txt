@@ -126,9 +126,10 @@ public class SwitchMediator : IMediator
                 typeof(Tests.Polymorphics.OrderPlacedEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_Polymorphics_OrderPlacedEvent__Handlers);
+
                     foreach (var handler in handlers)
                     {
-                        await handler.Handle((Tests.Polymorphics.OrderPlacedEvent)notification, cancellationToken);
+                        await /* Notification Handler */ handler.Handle((Tests.Polymorphics.OrderPlacedEvent) notification, cancellationToken);
                     }
                 }
             ),
@@ -136,9 +137,10 @@ public class SwitchMediator : IMediator
                 typeof(Tests.Polymorphics.UserCreatedEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_Polymorphics_UserCreatedEvent__Handlers);
+
                     foreach (var handler in handlers)
                     {
-                        await handler.Handle((Tests.Polymorphics.UserCreatedEvent)notification, cancellationToken);
+                        await /* Notification Handler */ handler.Handle((Tests.Polymorphics.UserCreatedEvent) notification, cancellationToken);
                     }
                 }
             )

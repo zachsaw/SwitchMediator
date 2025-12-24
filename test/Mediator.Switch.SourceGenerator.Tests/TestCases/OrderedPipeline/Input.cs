@@ -31,7 +31,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
         Console.WriteLine(" -> Behavior Order 2 (Validation) Start");
         // Simulate validation
         await Task.Delay(5); // Small delay
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine(" <- Behavior Order 2 (Validation) End");
         return response;
     }
@@ -45,7 +45,7 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine("-> Behavior Order 1 (Logging) Start");
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine("<- Behavior Order 1 (Logging) End");
         return response;
     }
@@ -58,7 +58,7 @@ public class MonitoringBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {
         Console.WriteLine("  -> Behavior Order Default (Monitoring) Start");
-        var response = await next();
+        var response = await next(cancellationToken);
         Console.WriteLine("  <- Behavior Order Default (Monitoring) End");
         return response;
     }

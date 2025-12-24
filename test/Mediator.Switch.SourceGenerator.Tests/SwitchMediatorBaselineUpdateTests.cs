@@ -10,16 +10,11 @@ using Xunit.Abstractions;
 
 namespace Mediator.Switch.SourceGenerator.Tests;
 
-public class SwitchMediatorBaselineUpdateTests
+public class SwitchMediatorBaselineUpdateTests(ITestOutputHelper output)
 {
-    private readonly ITestOutputHelper _output;
-
     private static ImmutableArray<MetadataReference>? _metadataReferences;
     private static readonly ReferenceAssemblies _referenceAssemblies = TestDefinitions.ReferenceAssemblies;
     private static readonly Assembly _mediatorAssembly = TestDefinitions.MediatorAssembly;
-
-    public SwitchMediatorBaselineUpdateTests(ITestOutputHelper output) =>
-        _output = output;
 
     [TheoryRunnableInDebugOnly]
     [InlineData("Basic")]
@@ -27,6 +22,8 @@ public class SwitchMediatorBaselineUpdateTests
     [InlineData("MultipleRequests")]
     [InlineData("Polymorphics")]
     [InlineData("Notifications")]
+    [InlineData("NotificationPipeline")]
+    [InlineData("NotificationPipelineConstrained")]
     [InlineData("BasicPipeline")]
     [InlineData("BasicPipelineNestedType")]
     [InlineData("BasicPipelineAdapted")]
@@ -41,15 +38,15 @@ public class SwitchMediatorBaselineUpdateTests
     [InlineData("ReferencesPublisher")]
     public async Task UpdateExpectedOutputFile(string testCase)
     {
-        await InitializeReferencesAsync(_output); // Ensure references are ready
+        await InitializeReferencesAsync(output); // Ensure references are ready
 
         var inputPath = Path.Combine("TestCases", testCase, "Input.cs");
         var expectedPath = Path.Combine(Path.GetDirectoryName(GetThisFilePath())!, "TestCases", testCase, "Expected.txt");
         const string expectedHintName = "SwitchMediator.g.cs";
 
-        _output.WriteLine($"Processing test case: {testCase}");
-        _output.WriteLine($"Input: {Path.GetFullPath(inputPath)}");
-        _output.WriteLine($"Output (will be overwritten): {Path.GetFullPath(expectedPath)}");
+        output.WriteLine($"Processing test case: {testCase}");
+        output.WriteLine($"Input: {Path.GetFullPath(inputPath)}");
+        output.WriteLine($"Output (will be overwritten): {Path.GetFullPath(expectedPath)}");
 
 
         var inputCode = await File.ReadAllTextAsync(inputPath);
@@ -98,7 +95,7 @@ public class SwitchMediatorBaselineUpdateTests
         var sw = Stopwatch.StartNew();
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
         sw.Stop();
-        _output.WriteLine($"Generator execution took {sw.ElapsedMilliseconds} ms");
+        output.WriteLine($"Generator execution took {sw.ElapsedMilliseconds} ms");
 
         // --- Check for generator or post-generator compilation diagnostics ---
         var criticalDiagnostics = diagnostics
@@ -110,9 +107,9 @@ public class SwitchMediatorBaselineUpdateTests
         {
             var errorMessages = string.Join(Environment.NewLine, criticalDiagnostics.Select(d => d.ToString()));
             // Write errors to output for easier debugging
-            _output.WriteLine($"--- ERRORS Encountered for {testCase} ---");
-            _output.WriteLine(errorMessages);
-            _output.WriteLine("--------------------------------------");
+            output.WriteLine($"--- ERRORS Encountered for {testCase} ---");
+            output.WriteLine(errorMessages);
+            output.WriteLine("--------------------------------------");
             // Fail the test so the baseline isn't updated with error output
             Assert.Fail($"Generator or compilation errors encountered during baseline update for '{testCase}'. See test output for details.");
         }
@@ -122,9 +119,9 @@ public class SwitchMediatorBaselineUpdateTests
             .ToList();
         if (warnings.Any())
         {
-            _output.WriteLine($"--- WARNINGS Encountered for {testCase} ---");
-            foreach (var warn in warnings) _output.WriteLine(warn.ToString());
-            _output.WriteLine("---------------------------------------");
+            output.WriteLine($"--- WARNINGS Encountered for {testCase} ---");
+            foreach (var warn in warnings) output.WriteLine(warn.ToString());
+            output.WriteLine("---------------------------------------");
         }
 
 
@@ -137,9 +134,9 @@ public class SwitchMediatorBaselineUpdateTests
         {
             if (generatorResult.Value.Exception != null)
             {
-                _output.WriteLine($"--- GENERATOR EXCEPTION for {testCase} ---");
-                _output.WriteLine(generatorResult.Value.Exception.ToString());
-                _output.WriteLine("---------------------------------------");
+                output.WriteLine($"--- GENERATOR EXCEPTION for {testCase} ---");
+                output.WriteLine(generatorResult.Value.Exception.ToString());
+                output.WriteLine("---------------------------------------");
                 Assert.Fail($"Generator threw an exception during baseline update for '{testCase}': {generatorResult.Value.Exception.Message}");
             }
 
@@ -147,19 +144,19 @@ public class SwitchMediatorBaselineUpdateTests
             if (generatedFile != null)
             {
                 actualGeneratedCode = generatedFile.Value.SourceText.ToString();
-                _output.WriteLine($"Successfully generated source for hint '{expectedHintName}'. Length: {actualGeneratedCode.Length}");
+                output.WriteLine($"Successfully generated source for hint '{expectedHintName}'. Length: {actualGeneratedCode.Length}");
             }
             else
             {
                 // If the generator ran but didn't produce the specific file, that's also an error for baseline update
-                _output.WriteLine($"--- ERROR: MISSING OUTPUT FILE for {testCase} ---");
-                _output.WriteLine($"Generator ran, but did not produce output with hint name '{expectedHintName}'.");
-                _output.WriteLine($"Generated files: [{string.Join(", ", generatorResult.Value.GeneratedSources.Select(gs => gs.HintName))}]");
-                _output.WriteLine("------------------------------------------------");
+                output.WriteLine($"--- ERROR: MISSING OUTPUT FILE for {testCase} ---");
+                output.WriteLine($"Generator ran, but did not produce output with hint name '{expectedHintName}'.");
+                output.WriteLine($"Generated files: [{string.Join(", ", generatorResult.Value.GeneratedSources.Select(gs => gs.HintName))}]");
+                output.WriteLine("------------------------------------------------");
                 Assert.Fail($"Generator ran but did not produce expected output '{expectedHintName}' for test case '{testCase}'.");
             }
         } else {
-            _output.WriteLine($"--- ERROR: GENERATOR DID NOT RUN for {testCase} ---");
+            output.WriteLine($"--- ERROR: GENERATOR DID NOT RUN for {testCase} ---");
             // This case is less likely with CSharpGeneratorDriver.Create but good to check
             Assert.Fail($"Generator {nameof(SwitchMediatorSourceGenerator)} did not run or was not found in the results for test case '{testCase}'.");
         }
@@ -167,7 +164,7 @@ public class SwitchMediatorBaselineUpdateTests
 
         Directory.CreateDirectory(Path.GetDirectoryName(expectedPath)!); // Ensure directory exists
         await File.WriteAllTextAsync(expectedPath, actualGeneratedCode);
-        _output.WriteLine($"Successfully updated baseline file: {expectedPath}");
+        output.WriteLine($"Successfully updated baseline file: {expectedPath}");
 
         // --- No Assertions needed here beyond checking for errors ---
         // The goal of this test *is* to write the file.

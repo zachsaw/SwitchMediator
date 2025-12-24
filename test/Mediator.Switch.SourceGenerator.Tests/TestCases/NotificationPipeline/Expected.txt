@@ -29,8 +29,9 @@ public class SwitchMediator : IMediator
 {
     #region Fields
 
-    private Tests.BasicPipeline.PingHandler? _tests_BasicPipeline_PingHandler;
-    private Tests.BasicPipeline.GenericBehavior<Tests.BasicPipeline.Ping, string>? _tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping;
+    private Tests.NotificationPipeline.ExceptionHandlingBehavior<Tests.NotificationPipeline.Alert>? _tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert;
+    private Tests.NotificationPipeline.LoggingNotificationBehavior<Tests.NotificationPipeline.Alert>? _tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert;
+    private IEnumerable<INotificationHandler<Tests.NotificationPipeline.Alert>>? _tests_NotificationPipeline_Alert__Handlers;
 
     private readonly ISwitchMediatorServiceProvider _svc;
 
@@ -64,11 +65,7 @@ public class SwitchMediator : IMediator
     {
         public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
         {
-            ( // case Tests.BasicPipeline.Ping:
-                typeof(Tests.BasicPipeline.Ping), (instance, request, cancellationToken) =>
-                    instance.Handle_Tests_BasicPipeline_Ping(
-                        (Tests.BasicPipeline.Ping) request, cancellationToken)
-            )
+
         }
 #if NET8_0_OR_GREATER
         .ToFrozenDictionary
@@ -92,7 +89,22 @@ public class SwitchMediator : IMediator
     {
         public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
         {
-
+            ( // case Tests.NotificationPipeline.Alert:
+                typeof(Tests.NotificationPipeline.Alert), async (instance, notification, cancellationToken) =>
+                {
+                    var handlers = instance.Get(ref instance._tests_NotificationPipeline_Alert__Handlers);
+                    var tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert = instance.Get(ref instance._tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert);
+                var tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert = instance.Get(ref instance._tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert);
+                    foreach (var handler in handlers)
+                    {
+                        await tests_NotificationPipeline_LoggingNotificationBehavior__tests_NotificationPipeline_Alert.Handle((Tests.NotificationPipeline.Alert) notification, ct =>
+            tests_NotificationPipeline_ExceptionHandlingBehavior__tests_NotificationPipeline_Alert.Handle((Tests.NotificationPipeline.Alert) notification, ct =>
+            /* Notification Handler */ handler.Handle((Tests.NotificationPipeline.Alert) notification, ct),
+            ct),
+            cancellationToken);
+                    }
+                }
+            )
         }
 #if NET8_0_OR_GREATER
         .ToFrozenDictionary
@@ -102,18 +114,7 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    private Task<string> Handle_Tests_BasicPipeline_Ping(
-        Tests.BasicPipeline.Ping request,
-        CancellationToken cancellationToken)
-    {
-        var tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping = Get(ref _tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping);
-        var tests_BasicPipeline_PingHandler = Get(ref _tests_BasicPipeline_PingHandler);
 
-        return
-            tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping.Handle(request, ct =>
-            /* Request Handler */ tests_BasicPipeline_PingHandler.Handle(request, ct),
-            cancellationToken);
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
@@ -129,17 +130,21 @@ public class SwitchMediator : IMediator
     {
         public static readonly IReadOnlyList<Type> RequestHandlerTypes =
             new Type[] {
-                typeof(Tests.BasicPipeline.PingHandler)
+
             }.AsReadOnly();
 
         public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes =
            new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
-
+                (typeof(Tests.NotificationPipeline.Alert), new Type[] {
+                    typeof(Tests.NotificationPipeline.EmailAlertHandler),
+                    typeof(Tests.NotificationPipeline.SmsAlertHandler)
+                })
            }.AsReadOnly();
 
         public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
            new Type[] {
-                typeof(Tests.BasicPipeline.GenericBehavior<Tests.BasicPipeline.Ping, string>)
+                typeof(Tests.NotificationPipeline.ExceptionHandlingBehavior<Tests.NotificationPipeline.Alert>),
+                typeof(Tests.NotificationPipeline.LoggingNotificationBehavior<Tests.NotificationPipeline.Alert>)
            }.AsReadOnly();
     }
 }

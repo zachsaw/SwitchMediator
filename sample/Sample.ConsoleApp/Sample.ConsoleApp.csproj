@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <PublishAot>true</PublishAot>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FluentResults" Version="4.0.0" />
+      <PackageReference Include="FluentValidation" Version="12.1.1" />
+      <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Mediator.Switch\Mediator.Switch.csproj" />
+      <ProjectReference Include="..\..\src\Mediator.Switch.Extensions.Microsoft.DependencyInjection\Mediator.Switch.Extensions.Microsoft.DependencyInjection.csproj" />
+      <ProjectReference Include="..\..\src\Mediator.Switch.SourceGenerator\Mediator.Switch.SourceGenerator.csproj" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+</Project>
