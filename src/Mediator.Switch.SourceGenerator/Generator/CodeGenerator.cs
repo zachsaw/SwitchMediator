@@ -5,6 +5,14 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class CodeGenerator
 {
+    // Define a custom format based on FullyQualifiedFormat but WITH nullable annotations
+    private static readonly SymbolDisplayFormat _fqn =
+        SymbolDisplayFormat.FullyQualifiedFormat
+            .WithMiscellaneousOptions(
+                SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions |
+                SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier
+            );
+
     public static string Generate(SemanticAnalysis analysis)
     {
         var iRequestType = analysis.RequestSymbol;
@@ -36,14 +44,14 @@ public static class CodeGenerator
         var handlerFields = handlers
             .Select(h => h.Class)
             .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
-            .Select(cls => $"private {cls}? _{cls.GetVariableName()};");
+            .Select(cls => $"private {cls.ToDisplayString(_fqn)}? _{cls.GetVariableName()};");
 
         // Generate behavior fields specific to each request
         var behaviorFields = actualRequestBehaviors.SelectMany(r =>
         {
             var (request, applicableBehaviors) = r;
             return applicableBehaviors.Select(b =>
-                $"private {b.Class.ToString().DropGenerics()}<{request.Class}, {b.TResponse}>? _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
+                $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {b.TResponse.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
         });
 
         // Generate behavior fields specific to each notification
@@ -53,11 +61,12 @@ public static class CodeGenerator
             {
                 var actualNotif = nb.NotificationInfo.ActualNotification;
                 return nb.Behaviors.Select(b =>
-                    $"private {b.Class.ToString().DropGenerics()}<{actualNotif}>? _{b.Class.GetVariableName()}__{actualNotif.GetVariableName()};");
+                    $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{actualNotif.GetVariableName()};");
             });
 
+        // Use global:: for system types to avoid collisions
         var notificationHandlerFields = usedNotifications.Select(n =>
-            $"private IEnumerable<INotificationHandler<{n}>>? _{n.GetVariableName()}__Handlers;");
+            $"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__Handlers;");
 
         // Generate Send method switch cases
         var sendCases = actualSendCases
@@ -76,18 +85,18 @@ public static class CodeGenerator
         var requestHandlerTypes = handlers
             .Select(h => h.Class)
             .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
-            .Select(cls => $"typeof({cls})");
+            .Select(cls => $"typeof({cls.ToDisplayString(_fqn)})");
 
         var notificationTypes = usedNotifications.Select(n =>
-            $"(typeof({n}), new Type[] {{\n                    {string.Join(",\n                    ", notificationHandlers
+            $"(typeof({n.ToDisplayString(_fqn)}), new global::System.Type[] {{\n                    {string.Join(",\n                    ", notificationHandlers
                 .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
-                .Select(h => $"typeof({h.Class})"))}\n                }})");
+                .Select(h => $"typeof({h.Class.ToDisplayString(_fqn)})"))}\n                }})");
 
         var pipelineBehaviorTypes = actualRequestBehaviors.SelectMany(r =>
         {
             var (request, applicableBehaviors) = r;
             return applicableBehaviors.Select(b =>
-                $"typeof({b.Class.ToString().DropGenerics()}<{request.Class}, {b.TResponse}>)");
+                $"typeof({b.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {b.TResponse.ToDisplayString(_fqn)}>)");
         });
 
         var notificationPipelineBehaviorTypes = notificationBehaviors
@@ -96,7 +105,7 @@ public static class CodeGenerator
             {
                 var actualNotif = nb.NotificationInfo.ActualNotification;
                 return nb.Behaviors.Select(b =>
-                    $"typeof({b.Class.ToString().DropGenerics()}<{actualNotif}>)");
+                    $"typeof({b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>)");
             });
 
         // Generate the complete SwitchMediator class
@@ -129,7 +138,7 @@ public static class CodeGenerator
                
                #pragma warning disable CS1998
                
-               public class SwitchMediator : IMediator
+               internal class SwitchMediator : IMediator
                {
                    #region Fields
                
@@ -148,24 +157,24 @@ public static class CodeGenerator
                
                    #endregion
                
-                   public static (IReadOnlyList<Type> RequestHandlerTypes, IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes, IReadOnlyList<Type> PipelineBehaviorTypes) KnownTypes
+                   public static (global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes, global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes, global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes) KnownTypes
                    {
                        get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
                    }
                
-                   public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+                   public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
                    {
                        if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
                        {
-                           return (Task<TResponse>)handle(this, request, cancellationToken);
+                           return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
                        }
                        
-                       throw new ArgumentException($"No handler for {request.GetType().Name}");
+                       throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
                    }
                
                    private static class SendSwitchCase
                    {
-                       public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
                        {
                {{string.Join(",\n", sendCases)}}
                        }
@@ -177,19 +186,19 @@ public static class CodeGenerator
                            (t => t.Item1, t => t.Item2);
                    }
                
-                   public Task Publish(INotification notification, CancellationToken cancellationToken = default)
+                   public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
                    {
                        if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
                        {
                            return handle(this, notification, cancellationToken);
                        }
                        
-                       return Task.CompletedTask;
+                       return global::System.Threading.Tasks.Task.CompletedTask;
                    }
                
                    private static class PublishSwitchCase
                    {
-                       public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
                        {
                {{string.Join(",\n", publishCases)}}
                        }
@@ -215,18 +224,18 @@ public static class CodeGenerator
                    /// </summary>
                    public static class SwitchMediatorKnownTypes
                    {
-                       public static readonly IReadOnlyList<Type> RequestHandlerTypes =
-                           new Type[] {
+                       public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
+                           new global::System.Type[] {
                                {{string.Join(",\n                ", requestHandlerTypes)}}
                            }.AsReadOnly();
                    
-                       public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes = 
-                          new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
+                       public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes = 
+                          new (global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)[] {
                                {{string.Join(",\n                ", notificationTypes)}}
                           }.AsReadOnly();
                
-                       public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
-                          new Type[] {
+                       public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes =
+                          new global::System.Type[] {
                                {{string.Join(",\n                ", pipelineBehaviorTypes.Concat(notificationPipelineBehaviorTypes))}}
                           }.AsReadOnly();
                    }    
@@ -261,9 +270,9 @@ public static class CodeGenerator
         (INamedTypeSymbol Class, ITypeSymbol TResponse) request) =>
         $$"""
                       ( // case {{request.Class}}:
-                          typeof({{request.Class}}), (instance, request, cancellationToken) =>
+                          typeof({{request.Class.ToDisplayString(_fqn)}}), (instance, request, cancellationToken) =>
                               instance.Handle_{{actualHandler.GetVariableName(false)}}(
-                                  ({{request.Class}}) request, cancellationToken)
+                                  ({{request.Class.ToDisplayString(_fqn)}}) request, cancellationToken)
                       )
           """;
 
@@ -299,23 +308,27 @@ public static class CodeGenerator
             .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
 
         var notificationName = actualNotification.GetVariableName();
-        var notificationType = actualNotification.ToDisplayString();
+        var notificationType = actualNotification.ToDisplayString(_fqn);
 
         var behaviorResolutions = behaviors.Select(b =>
             $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
 
-        var coreCall = $"handler.Handle(({notificationType}) notification, cancellationToken)";
-        var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, notificationType, coreCall);
+        var typedVar = "typedNotification";
+        var coreCall = $"handler.Handle({typedVar}, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, typedVar, coreCall);
 
         return $$"""
                       ( // case {{notification}}:
-                          typeof({{notification}}), async (instance, notification, cancellationToken) =>
+                          typeof({{notification.ToDisplayString(_fqn)}}), async (instance, notification, cancellationToken) =>
                           {
                               var handlers = instance.Get(ref instance._{{actualNotification.GetVariableName()}}__Handlers);
-                              {{string.Join("\n                ", behaviorResolutions)}}
+                              {{string.Join("\n                    ", behaviorResolutions)}}
+                              var {{typedVar}} = ({{notificationType}}) notification;
+                              
                               foreach (var handler in handlers)
                               {
-                                  await {{chain}};
+                                  await
+                                      {{chain}};
                               }
                           }
                       )
@@ -336,9 +349,9 @@ public static class CodeGenerator
         var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall);
 
         return $$"""
-                 private Task<{{request.TResponse}}> Handle_{{request.Class.GetVariableName(false)}}(
-                         {{request.Class}} request,
-                         CancellationToken cancellationToken)
+                 private global::System.Threading.Tasks.Task<{{request.TResponse.ToDisplayString(_fqn)}}> Handle_{{request.Class.GetVariableName(false)}}(
+                         {{request.Class.ToDisplayString(_fqn)}} request,
+                         global::System.Threading.CancellationToken cancellationToken)
                      {
                          {{string.Join("\n        ", chainVars)}}
                          {{coreVar}}

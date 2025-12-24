@@ -15,7 +15,7 @@ public static class BehaviorChainBuilder
                 .Aggregate(
                     seed: chain,
                     func: (innerChain, behavior) =>
-                        $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, ct => \n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)"
+                        $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, ct =>\n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)"
                 )
             : chain;
     }
@@ -23,7 +23,7 @@ public static class BehaviorChainBuilder
     public static string BuildNotification(
         List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
         string notificationName,
-        string notificationType,
+        string notificationVariableName,
         string coreHandler)
     {
         var chain = $"/* Notification Handler */ {coreHandler}";
@@ -32,7 +32,7 @@ public static class BehaviorChainBuilder
             ? behaviors.Aggregate(
                 seed: chain,
                 func: (innerChain, behavior) =>
-                    $"{behavior.Class.GetVariableName()}__{notificationName}.Handle(({notificationType}) notification, ct => \n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)"
+                    $"{behavior.Class.GetVariableName()}__{notificationName}.Handle({notificationVariableName}, ct =>\n                            {innerChain.Replace("cancellationToken", "ct")},\n                            cancellationToken)"
             )
             : chain;
     }
