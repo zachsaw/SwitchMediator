@@ -25,11 +25,11 @@ namespace Mediator.Switch;
 
 #pragma warning disable CS1998
 
-public class SwitchMediator : IMediator
+internal class SwitchMediator : IMediator
 {
     #region Fields
 
-    private Tests.BasicRecordType.PingHandler? _tests_BasicRecordType_PingHandler;
+    private global::Tests.BasicRecordType.PingHandler? _tests_BasicRecordType_PingHandler;
 
     private readonly ISwitchMediatorServiceProvider _svc;
 
@@ -44,29 +44,29 @@ public class SwitchMediator : IMediator
 
     #endregion
 
-    public static (IReadOnlyList<Type> RequestHandlerTypes, IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes, IReadOnlyList<Type> PipelineBehaviorTypes) KnownTypes
+    public static (global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes, global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes, global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes) KnownTypes
     {
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
-    public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
         {
-            return (Task<TResponse>)handle(this, request, cancellationToken);
+            return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
         }
 
-        throw new ArgumentException($"No handler for {request.GetType().Name}");
+        throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
     }
 
     private static class SendSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
         {
             ( // case Tests.BasicRecordType.Ping:
-                typeof(Tests.BasicRecordType.Ping), (instance, request, cancellationToken) =>
+                typeof(global::Tests.BasicRecordType.Ping), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_BasicRecordType_Ping(
-                        (Tests.BasicRecordType.Ping) request, cancellationToken)
+                        (global::Tests.BasicRecordType.Ping) request, cancellationToken)
             )
         }
 #if NET8_0_OR_GREATER
@@ -77,19 +77,19 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    public Task Publish(INotification notification, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
         {
             return handle(this, notification, cancellationToken);
         }
 
-        return Task.CompletedTask;
+        return global::System.Threading.Tasks.Task.CompletedTask;
     }
 
     private static class PublishSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
         {
 
         }
@@ -101,9 +101,9 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    private Task<string> Handle_Tests_BasicRecordType_Ping(
-        Tests.BasicRecordType.Ping request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<string> Handle_Tests_BasicRecordType_Ping(
+        global::Tests.BasicRecordType.Ping request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
 
         var tests_BasicRecordType_PingHandler = Get(ref _tests_BasicRecordType_PingHandler);
@@ -124,18 +124,18 @@ public class SwitchMediator : IMediator
     /// </summary>
     public static class SwitchMediatorKnownTypes
     {
-        public static readonly IReadOnlyList<Type> RequestHandlerTypes =
-            new Type[] {
-                typeof(Tests.BasicRecordType.PingHandler)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
+            new global::System.Type[] {
+                typeof(global::Tests.BasicRecordType.PingHandler)
             }.AsReadOnly();
 
-        public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes =
-           new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =
+           new (global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)[] {
 
            }.AsReadOnly();
 
-        public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
-           new Type[] {
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes =
+           new global::System.Type[] {
 
            }.AsReadOnly();
     }

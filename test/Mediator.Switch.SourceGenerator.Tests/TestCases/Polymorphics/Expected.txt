@@ -25,17 +25,17 @@ namespace Mediator.Switch;
 
 #pragma warning disable CS1998
 
-public class SwitchMediator : IMediator
+internal class SwitchMediator : IMediator
 {
     #region Fields
 
-    private Tests.Polymorphics.DogRequestHandler? _tests_Polymorphics_DogRequestHandler;
-    private Tests.Polymorphics.CatRequestHandler? _tests_Polymorphics_CatRequestHandler;
-    private Tests.Polymorphics.GenericAnimalRequestHandler? _tests_Polymorphics_GenericAnimalRequestHandler;
-    private Tests.Polymorphics.CarRequestHandler? _tests_Polymorphics_CarRequestHandler;
-    private Tests.Polymorphics.VehicleRequestHandler? _tests_Polymorphics_VehicleRequestHandler;
-    private IEnumerable<INotificationHandler<Tests.Polymorphics.OrderPlacedEvent>>? _tests_Polymorphics_OrderPlacedEvent__Handlers;
-    private IEnumerable<INotificationHandler<Tests.Polymorphics.UserCreatedEvent>>? _tests_Polymorphics_UserCreatedEvent__Handlers;
+    private global::Tests.Polymorphics.DogRequestHandler? _tests_Polymorphics_DogRequestHandler;
+    private global::Tests.Polymorphics.CatRequestHandler? _tests_Polymorphics_CatRequestHandler;
+    private global::Tests.Polymorphics.GenericAnimalRequestHandler? _tests_Polymorphics_GenericAnimalRequestHandler;
+    private global::Tests.Polymorphics.CarRequestHandler? _tests_Polymorphics_CarRequestHandler;
+    private global::Tests.Polymorphics.VehicleRequestHandler? _tests_Polymorphics_VehicleRequestHandler;
+    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Polymorphics.OrderPlacedEvent>>? _tests_Polymorphics_OrderPlacedEvent__Handlers;
+    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Polymorphics.UserCreatedEvent>>? _tests_Polymorphics_UserCreatedEvent__Handlers;
 
     private readonly ISwitchMediatorServiceProvider _svc;
 
@@ -50,54 +50,54 @@ public class SwitchMediator : IMediator
 
     #endregion
 
-    public static (IReadOnlyList<Type> RequestHandlerTypes, IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes, IReadOnlyList<Type> PipelineBehaviorTypes) KnownTypes
+    public static (global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes, global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes, global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes) KnownTypes
     {
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
-    public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
         {
-            return (Task<TResponse>)handle(this, request, cancellationToken);
+            return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
         }
 
-        throw new ArgumentException($"No handler for {request.GetType().Name}");
+        throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
     }
 
     private static class SendSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, object, CancellationToken, object>> Cases = new (Type, Func<SwitchMediator, object, CancellationToken, object>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
         {
             ( // case Tests.Polymorphics.CatRequest:
-                typeof(Tests.Polymorphics.CatRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.CatRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_Polymorphics_CatRequest(
-                        (Tests.Polymorphics.CatRequest) request, cancellationToken)
+                        (global::Tests.Polymorphics.CatRequest) request, cancellationToken)
             ),
             ( // case Tests.Polymorphics.DogRequest:
-                typeof(Tests.Polymorphics.DogRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.DogRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_Polymorphics_DogRequest(
-                        (Tests.Polymorphics.DogRequest) request, cancellationToken)
+                        (global::Tests.Polymorphics.DogRequest) request, cancellationToken)
             ),
             ( // case Tests.Polymorphics.AnimalRequest:
-                typeof(Tests.Polymorphics.AnimalRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.AnimalRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_Polymorphics_AnimalRequest(
-                        (Tests.Polymorphics.AnimalRequest) request, cancellationToken)
+                        (global::Tests.Polymorphics.AnimalRequest) request, cancellationToken)
             ),
             ( // case Tests.Polymorphics.CarRequest:
-                typeof(Tests.Polymorphics.CarRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.CarRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_Polymorphics_CarRequest(
-                        (Tests.Polymorphics.CarRequest) request, cancellationToken)
+                        (global::Tests.Polymorphics.CarRequest) request, cancellationToken)
             ),
             ( // case Tests.Polymorphics.TruckRequest:
-                typeof(Tests.Polymorphics.TruckRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.TruckRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_Polymorphics_VehicleRequest(
-                        (Tests.Polymorphics.TruckRequest) request, cancellationToken)
+                        (global::Tests.Polymorphics.TruckRequest) request, cancellationToken)
             ),
             ( // case Tests.Polymorphics.VehicleRequest:
-                typeof(Tests.Polymorphics.VehicleRequest), (instance, request, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.VehicleRequest), (instance, request, cancellationToken) =>
                     instance.Handle_Tests_Polymorphics_VehicleRequest(
-                        (Tests.Polymorphics.VehicleRequest) request, cancellationToken)
+                        (global::Tests.Polymorphics.VehicleRequest) request, cancellationToken)
             )
         }
 #if NET8_0_OR_GREATER
@@ -108,39 +108,45 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    public Task Publish(INotification notification, CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
         {
             return handle(this, notification, cancellationToken);
         }
 
-        return Task.CompletedTask;
+        return global::System.Threading.Tasks.Task.CompletedTask;
     }
 
     private static class PublishSwitchCase
     {
-        public static readonly IDictionary<Type, Func<SwitchMediator, INotification, CancellationToken, Task>> Cases = new (Type, Func<SwitchMediator, INotification, CancellationToken, Task>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
         {
             ( // case Tests.Polymorphics.OrderPlacedEvent:
-                typeof(Tests.Polymorphics.OrderPlacedEvent), async (instance, notification, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.OrderPlacedEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_Polymorphics_OrderPlacedEvent__Handlers);
 
+                    var typedNotification = (global::Tests.Polymorphics.OrderPlacedEvent) notification;
+
                     foreach (var handler in handlers)
                     {
-                        await /* Notification Handler */ handler.Handle((Tests.Polymorphics.OrderPlacedEvent) notification, cancellationToken);
+                        await
+                            /* Notification Handler */ handler.Handle(typedNotification, cancellationToken);
                     }
                 }
             ),
             ( // case Tests.Polymorphics.UserCreatedEvent:
-                typeof(Tests.Polymorphics.UserCreatedEvent), async (instance, notification, cancellationToken) =>
+                typeof(global::Tests.Polymorphics.UserCreatedEvent), async (instance, notification, cancellationToken) =>
                 {
                     var handlers = instance.Get(ref instance._tests_Polymorphics_UserCreatedEvent__Handlers);
 
+                    var typedNotification = (global::Tests.Polymorphics.UserCreatedEvent) notification;
+
                     foreach (var handler in handlers)
                     {
-                        await /* Notification Handler */ handler.Handle((Tests.Polymorphics.UserCreatedEvent) notification, cancellationToken);
+                        await
+                            /* Notification Handler */ handler.Handle(typedNotification, cancellationToken);
                     }
                 }
             )
@@ -153,9 +159,9 @@ public class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    private Task<string> Handle_Tests_Polymorphics_AnimalRequest(
-        Tests.Polymorphics.AnimalRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<string> Handle_Tests_Polymorphics_AnimalRequest(
+        global::Tests.Polymorphics.AnimalRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
 
         var tests_Polymorphics_GenericAnimalRequestHandler = Get(ref _tests_Polymorphics_GenericAnimalRequestHandler);
@@ -164,9 +170,9 @@ public class SwitchMediator : IMediator
             /* Request Handler */ tests_Polymorphics_GenericAnimalRequestHandler.Handle(request, cancellationToken);
     }
 
-    private Task<string> Handle_Tests_Polymorphics_DogRequest(
-        Tests.Polymorphics.DogRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<string> Handle_Tests_Polymorphics_DogRequest(
+        global::Tests.Polymorphics.DogRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
 
         var tests_Polymorphics_DogRequestHandler = Get(ref _tests_Polymorphics_DogRequestHandler);
@@ -175,9 +181,9 @@ public class SwitchMediator : IMediator
             /* Request Handler */ tests_Polymorphics_DogRequestHandler.Handle(request, cancellationToken);
     }
 
-    private Task<string> Handle_Tests_Polymorphics_CatRequest(
-        Tests.Polymorphics.CatRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<string> Handle_Tests_Polymorphics_CatRequest(
+        global::Tests.Polymorphics.CatRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
 
         var tests_Polymorphics_CatRequestHandler = Get(ref _tests_Polymorphics_CatRequestHandler);
@@ -186,9 +192,9 @@ public class SwitchMediator : IMediator
             /* Request Handler */ tests_Polymorphics_CatRequestHandler.Handle(request, cancellationToken);
     }
 
-    private Task<double> Handle_Tests_Polymorphics_VehicleRequest(
-        Tests.Polymorphics.VehicleRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<double> Handle_Tests_Polymorphics_VehicleRequest(
+        global::Tests.Polymorphics.VehicleRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
 
         var tests_Polymorphics_VehicleRequestHandler = Get(ref _tests_Polymorphics_VehicleRequestHandler);
@@ -197,9 +203,9 @@ public class SwitchMediator : IMediator
             /* Request Handler */ tests_Polymorphics_VehicleRequestHandler.Handle(request, cancellationToken);
     }
 
-    private Task<double> Handle_Tests_Polymorphics_CarRequest(
-        Tests.Polymorphics.CarRequest request,
-        CancellationToken cancellationToken)
+    private global::System.Threading.Tasks.Task<double> Handle_Tests_Polymorphics_CarRequest(
+        global::Tests.Polymorphics.CarRequest request,
+        global::System.Threading.CancellationToken cancellationToken)
     {
 
         var tests_Polymorphics_CarRequestHandler = Get(ref _tests_Polymorphics_CarRequestHandler);
@@ -220,28 +226,28 @@ public class SwitchMediator : IMediator
     /// </summary>
     public static class SwitchMediatorKnownTypes
     {
-        public static readonly IReadOnlyList<Type> RequestHandlerTypes =
-            new Type[] {
-                typeof(Tests.Polymorphics.DogRequestHandler),
-                typeof(Tests.Polymorphics.CatRequestHandler),
-                typeof(Tests.Polymorphics.GenericAnimalRequestHandler),
-                typeof(Tests.Polymorphics.CarRequestHandler),
-                typeof(Tests.Polymorphics.VehicleRequestHandler)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
+            new global::System.Type[] {
+                typeof(global::Tests.Polymorphics.DogRequestHandler),
+                typeof(global::Tests.Polymorphics.CatRequestHandler),
+                typeof(global::Tests.Polymorphics.GenericAnimalRequestHandler),
+                typeof(global::Tests.Polymorphics.CarRequestHandler),
+                typeof(global::Tests.Polymorphics.VehicleRequestHandler)
             }.AsReadOnly();
 
-        public static readonly IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes =
-           new (Type NotificationType, IReadOnlyList<Type> HandlerTypes)[] {
-                (typeof(Tests.Polymorphics.OrderPlacedEvent), new Type[] {
-                    typeof(Tests.Polymorphics.OrderPlacedInventoryHandler)
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =
+           new (global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)[] {
+                (typeof(global::Tests.Polymorphics.OrderPlacedEvent), new global::System.Type[] {
+                    typeof(global::Tests.Polymorphics.OrderPlacedInventoryHandler)
                 }),
-                (typeof(Tests.Polymorphics.UserCreatedEvent), new Type[] {
-                    typeof(Tests.Polymorphics.UserCreatedEmailHandler),
-                    typeof(Tests.Polymorphics.UserCreatedAnalyticsHandler)
+                (typeof(global::Tests.Polymorphics.UserCreatedEvent), new global::System.Type[] {
+                    typeof(global::Tests.Polymorphics.UserCreatedEmailHandler),
+                    typeof(global::Tests.Polymorphics.UserCreatedAnalyticsHandler)
                 })
            }.AsReadOnly();
 
-        public static readonly IReadOnlyList<Type> PipelineBehaviorTypes =
-           new Type[] {
+        public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes =
+           new global::System.Type[] {
 
            }.AsReadOnly();
     }
