@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Benchmark",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Tests.Referenced", "test\Mediator.Switch.Tests.Referenced\Mediator.Switch.Tests.Referenced.csproj", "{DF08A605-9749-4C75-95FB-53CD57209D1E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mediator.Switch.Analyzer", "src\Mediator.Switch.Analyzer\Mediator.Switch.Analyzer.csproj", "{5523A229-D654-4A29-B117-F2581447A56E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -84,6 +86,10 @@ Global
 		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF08A605-9749-4C75-95FB-53CD57209D1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5523A229-D654-4A29-B117-F2581447A56E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5523A229-D654-4A29-B117-F2581447A56E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5523A229-D654-4A29-B117-F2581447A56E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5523A229-D654-4A29-B117-F2581447A56E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EFECD70B-6FDE-4BE5-9690-8669FE53204A} = {07C1945F-F0B2-4E76-927C-0105DABC0098}

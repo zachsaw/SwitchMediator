@@ -9,4 +9,13 @@
         <Description>A Mediator implementation using source generated C# switch expressions for handler dispatch enabling faster execution, improved startup times, step-into debuggability, and compile-time safety.</Description>
     </PropertyGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\Mediator.Switch.Analyzer\Mediator.Switch.Analyzer.csproj"
+                          ReferenceOutputAssembly="false" />
+        <None Include="..\Mediator.Switch.Analyzer\bin\$(Configuration)\netstandard2.0\Mediator.Switch.Analyzer.dll"
+              Pack="true"
+              PackagePath="analyzers/dotnet/cs"
+              Visible="false" />
+    </ItemGroup>
+
 </Project>
