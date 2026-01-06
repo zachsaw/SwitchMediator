@@ -8,9 +8,6 @@ namespace Mediator.Switch.SourceGenerator;
 
 public class SemanticAnalyzer
 {
-    private const string AdaptorAttributeName = "PipelineBehaviorResponseAdaptorAttribute";
-    private const string AdaptorAttributeGenericsTypeName = $"{AdaptorAttributeName}.GenericsType";
-
     private readonly Compilation _compilation;
     private readonly INamedTypeSymbol _iRequestSymbol;
     private readonly INamedTypeSymbol _iRequestHandlerSymbol;
@@ -18,7 +15,6 @@ public class SemanticAnalyzer
     private readonly INamedTypeSymbol _iNotificationPipelineBehaviorSymbol;
     private readonly INamedTypeSymbol _iNotificationSymbol;
     private readonly INamedTypeSymbol _iNotificationHandlerSymbol;
-    private readonly INamedTypeSymbol _responseAdaptorAttributeSymbol;
     private readonly INamedTypeSymbol _orderAttributeSymbol;
     private readonly INamedTypeSymbol _requestHandlerAttributeSymbol;
 
@@ -39,7 +35,6 @@ public class SemanticAnalyzer
         _iNotificationSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotification") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotification");
         _iNotificationHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotificationHandler`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotificationHandler`1");
         _orderAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorOrderAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorOrderAttribute");
-        _responseAdaptorAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorResponseAdaptorAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorResponseAdaptorAttribute");
         _requestHandlerAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.RequestHandlerAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.RequestHandlerAttribute");
     }
 
@@ -277,8 +272,6 @@ public class SemanticAnalyzer
         }
 
         var typeParameters = typeSymbol.TypeParameters;
-        VerifyAdaptorMatchesTResponse(typeSymbol, interfaceTResponse);
-
         if (!behaviors.Any(b => SymbolEqualityComparer.Default.Equals(b.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(b.TRequest, interfaceTRequest) && SymbolEqualityComparer.Default.Equals(b.TResponse, interfaceTResponse)))
         {
             behaviors.Add((typeSymbol, interfaceTRequest, interfaceTResponse, typeParameters, wrapperType));
@@ -475,48 +468,14 @@ public class SemanticAnalyzer
             if (!SymbolEqualityComparer.Default.Equals(attributeSymbol, classSymbol))
             {
                 var syntaxReference = requestHandlerAttribute.ApplicationSyntaxReference;
+                var location = syntaxReference != null
+                    ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span)
+                    : handledType.Locations.FirstOrDefault() ?? classSymbol.Locations.FirstOrDefault() ?? Location.None;
                 throw new SourceGenerationException(
                     $"RequestHandlerAttribute: Handler type mismatch on '{handledType.ToDisplayString()}' - expecting handler '{classSymbol.ToDisplayString()}' but attribute points to '{attributeSymbol.ToDisplayString()}'.",
-                    syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
+                    location);
             }
         }
-    }
-
-    private void VerifyAdaptorMatchesTResponse(INamedTypeSymbol classSymbol, ITypeSymbol tResponse)
-    {
-        var responseTypeAdaptorAttribute = classSymbol.GetAttributes()
-            .FirstOrDefault(attr => attr.AttributeClass != null && OriginalDefinitionMatches(attr.AttributeClass, _responseAdaptorAttributeSymbol));
-
-        if (responseTypeAdaptorAttribute == null) return;
-
-        var responseWrapperType = GetAdaptorWrapperType(responseTypeAdaptorAttribute);
-        if (tResponse is not INamedTypeSymbol unwrappedResponseType ||
-            !SymbolEqualityComparer.Default.Equals(unwrappedResponseType.OriginalDefinition, responseWrapperType.OriginalDefinition))
-        {
-            var syntaxReference = responseTypeAdaptorAttribute.ApplicationSyntaxReference;
-            throw new SourceGenerationException($"{AdaptorAttributeGenericsTypeName} does not match IPipelineBehavior's TResponse argument.",
-                syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
-        }
-    }
-
-    private static INamedTypeSymbol GetAdaptorWrapperType(AttributeData responseTypeAdaptorAttribute)
-    {
-        if (responseTypeAdaptorAttribute.ConstructorArguments.Length != 1 ||
-            responseTypeAdaptorAttribute.ConstructorArguments[0].Value is not INamedTypeSymbol typeArgSymbol)
-        {
-            var syntaxReference = responseTypeAdaptorAttribute.ApplicationSyntaxReference;
-            throw new SourceGenerationException($"{AdaptorAttributeName} requires a single 'typeof(UnboundGeneric<>)' argument.",
-                syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
-        }
-
-        if (!typeArgSymbol.IsUnboundGenericType || typeArgSymbol.TypeParameters.Length != 1)
-        {
-            var syntaxReference = responseTypeAdaptorAttribute.ApplicationSyntaxReference;
-            throw new SourceGenerationException($"{AdaptorAttributeGenericsTypeName} must be an unbound generic type with 1 argument (e.g., typeof(Wrapper<>)).",
-                syntaxReference != null ? Location.Create(syntaxReference.SyntaxTree, syntaxReference.Span) : Location.None);
-        }
-
-        return typeArgSymbol;
     }
 
     private int GetOrder(ITypeSymbol typeSymbol)
