@@ -2,6 +2,7 @@ namespace Mediator.Switch.Tests.Referenced;
 
 public record UserDto(int UserId, string Description, int Version);
 
+[RequestHandler(typeof(ExternalGetUserRequestHandler))]
 public sealed class ExternalGetUserRequest : IRequest<UserDto>
 {
     public int UserId { get; }
@@ -18,4 +19,3 @@ public class ExternalGetUserRequestHandler : IRequestHandler<ExternalGetUserRequ
         return Task.FromResult(dto);
     }
 }
-

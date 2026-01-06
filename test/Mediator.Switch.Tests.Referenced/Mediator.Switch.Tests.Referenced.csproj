@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Mediator.Switch\Mediator.Switch.csproj" />
+    <ProjectReference Include="..\..\src\Mediator.Switch.Analyzer\Mediator.Switch.Analyzer.csproj" OutputItemType="Analyzer" />
   </ItemGroup>
 
 </Project>
