@@ -42,7 +42,7 @@ public class SwitchMediatorBaselineUpdateTests(ITestOutputHelper output)
 
         var inputPath = Path.Combine("TestCases", testCase, "Input.cs");
         var expectedPath = Path.Combine(Path.GetDirectoryName(GetThisFilePath())!, "TestCases", testCase, "Expected.txt");
-        const string expectedHintName = "SwitchMediator.g.cs";
+        const string expectedHintName = "TestMediator.g.cs";
 
         output.WriteLine($"Processing test case: {testCase}");
         output.WriteLine($"Input: {Path.GetFullPath(inputPath)}");

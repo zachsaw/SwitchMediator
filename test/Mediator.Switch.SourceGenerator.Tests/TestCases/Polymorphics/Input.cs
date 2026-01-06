@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.Polymorphics;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 // --- Polymorphic Requests ---
 
 // Base Request

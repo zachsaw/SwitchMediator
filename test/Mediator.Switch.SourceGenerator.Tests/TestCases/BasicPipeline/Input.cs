@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.BasicPipeline;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 public class Ping : IRequest<string>;
 
 public class PingHandler : IRequestHandler<Ping, string>

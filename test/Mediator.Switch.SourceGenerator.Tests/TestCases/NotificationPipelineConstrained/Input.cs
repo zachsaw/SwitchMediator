@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.NotificationPipelineConstrained;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 public interface IAuditableNotification { }
 
 // Implements marker interface

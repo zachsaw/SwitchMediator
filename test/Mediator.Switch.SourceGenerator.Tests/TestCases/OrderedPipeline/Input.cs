@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.OrderedPipeline;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 // The Request
 public class CalculationRequest : IRequest<int>
 {

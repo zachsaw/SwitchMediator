@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.MultipleRequests;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 // First Request
 public class GetProductRequest : IRequest<string>
 {
@@ -25,6 +28,6 @@ public class GetInventoryRequest : IRequest<int>
 
 public class GetInventoryRequestHandler : IRequestHandler<GetInventoryRequest, int>
 {
-    public Task<int> Handle(GetInventoryRequest request, CancellationToken cancellationToken = default) => 
+    public Task<int> Handle(GetInventoryRequest request, CancellationToken cancellationToken = default) =>
         Task.FromResult(request.Sku?.Length ?? 0); // Dummy logic
 }

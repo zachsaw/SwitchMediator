@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.ReferencesMediator;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 [RequestHandler(typeof(PingHandler))]
 public class Ping : IRequest<string>;
 public class PingHandler : IRequestHandler<Ping, string>

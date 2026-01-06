@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.ConstrainedPipeline;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 // Marker interface for constraint
 public interface ISpecialProcessingRequired { }
 
