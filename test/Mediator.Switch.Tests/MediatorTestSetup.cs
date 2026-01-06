@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Mediator.Switch.Tests;
 
+[SwitchMediator]
+public partial class SwitchMediator;
+
 public static class MediatorTestSetup
 {
     public static (

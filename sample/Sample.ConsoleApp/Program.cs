@@ -5,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Sample.ConsoleApp;
 
+[SwitchMediator]
+public partial class SwitchMediator;
+
 public static class Program
 {
     public static async Task Main()

@@ -11,3 +11,6 @@ public sealed class RequestHandlerAttribute(Type handlerType) : Attribute
 {
     public Type HandlerType { get; } = handlerType;
 }
+
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class SwitchMediatorAttribute : Attribute;

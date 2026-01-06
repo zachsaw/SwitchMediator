@@ -16,6 +16,7 @@ public class SemanticAnalyzer
     private readonly INamedTypeSymbol _iNotificationSymbol;
     private readonly INamedTypeSymbol _iNotificationHandlerSymbol;
     private readonly INamedTypeSymbol _orderAttributeSymbol;
+    private readonly INamedTypeSymbol _switchMediatorAttributeSymbol;
 
     public SemanticAnalyzer(Compilation compilation)
     {
@@ -34,6 +35,7 @@ public class SemanticAnalyzer
         _iNotificationSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotification") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotification");
         _iNotificationHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotificationHandler`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotificationHandler`1");
         _orderAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorOrderAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorOrderAttribute");
+        _switchMediatorAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.SwitchMediatorAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.SwitchMediatorAttribute");
     }
 
     public SemanticAnalysis Analyze(List<TypeDeclarationSyntax> types, CancellationToken cancellationToken)
@@ -44,12 +46,37 @@ public class SemanticAnalyzer
         var notificationBehaviors = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
         var notifications = new List<ITypeSymbol>();
         var notificationHandlers = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification)>();
+        INamedTypeSymbol? mediatorClass = null;
 
         // Analyze types discovered by the syntax receiver
         foreach (var typeSyntax in types)
         {
             if (cancellationToken.IsCancellationRequested) break;
-            AnalyzeTypeSyntax(typeSyntax, cancellationToken, requests, handlers, behaviors, notificationBehaviors, notifications, notificationHandlers);
+
+            var model = _compilation.GetSemanticModel(typeSyntax.SyntaxTree);
+            if (model.GetDeclaredSymbol(typeSyntax, cancellationToken) is not {Kind: SymbolKind.NamedType} typeSymbol)
+            {
+                continue;
+            }
+
+            // Check if this class has [SwitchMediator]
+            if (IsSwitchMediator(typeSymbol))
+            {
+                if (mediatorClass != null)
+                {
+                    throw new SourceGenerationException("Multiple classes found with [SwitchMediator] attribute. Only one is allowed per assembly.", typeSymbol.Locations[0]);
+                }
+
+                if (!typeSyntax.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)))
+                {
+                    throw new SourceGenerationException($"Class '{typeSymbol.Name}' marked with [SwitchMediator] must be partial.", typeSymbol.Locations[0]);
+                }
+
+                mediatorClass = typeSymbol;
+            }
+
+            // Proceed with standard analysis
+            AnalyzeTypeSymbol(typeSymbol, cancellationToken, requests, handlers, behaviors, notificationBehaviors, notifications, notificationHandlers);
         }
 
         // Analyze referenced assemblies
@@ -71,6 +98,7 @@ public class SemanticAnalyzer
         var processedNotificationBehaviors = ProcessNotificationBehaviors(notifications, notificationHandlers, notificationBehaviors);
 
         return new SemanticAnalysis(
+            MediatorClass: mediatorClass,
             RequestSymbol: _iRequestSymbol,
             NotificationSymbol: _iNotificationSymbol,
             Handlers: handlers,
@@ -81,24 +109,8 @@ public class SemanticAnalyzer
         );
     }
 
-    private void AnalyzeTypeSyntax(
-        TypeDeclarationSyntax typeSyntax,
-        CancellationToken cancellationToken,
-        List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> notificationBehaviors,
-        List<ITypeSymbol> notifications,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
-    {
-        var model = _compilation.GetSemanticModel(typeSyntax.SyntaxTree);
-        if (model.GetDeclaredSymbol(typeSyntax, cancellationToken) is not {Kind: SymbolKind.NamedType} typeSymbol)
-        {
-            return;
-        }
-
-        AnalyzeTypeSymbol(typeSymbol, cancellationToken, requests, handlers, behaviors, notificationBehaviors, notifications, notificationHandlers);
-    }
+    private bool IsSwitchMediator(INamedTypeSymbol typeSymbol) =>
+        typeSymbol.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, _switchMediatorAttributeSymbol));
 
     private void AnalyzeTypeSymbol(
         INamedTypeSymbol typeSymbol,
@@ -144,6 +156,9 @@ public class SemanticAnalyzer
         List<ITypeSymbol> notifications,
         List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
     {
+        VisitNamespace(assemblySymbol.GlobalNamespace);
+        return;
+
         void VisitNamespace(INamespaceSymbol ns)
         {
             if (cancellationToken.IsCancellationRequested) return;
@@ -162,8 +177,6 @@ public class SemanticAnalyzer
                 }
             }
         }
-
-        VisitNamespace(assemblySymbol.GlobalNamespace);
     }
 
     private static bool OriginalDefinitionMatches(ITypeSymbol iface, INamedTypeSymbol target)

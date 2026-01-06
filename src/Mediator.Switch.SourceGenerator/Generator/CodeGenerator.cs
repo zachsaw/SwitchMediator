@@ -15,6 +15,13 @@ public static class CodeGenerator
 
     public static string Generate(SemanticAnalysis analysis)
     {
+        var mediator = analysis.MediatorClass ?? throw new ArgumentNullException(nameof(analysis.MediatorClass));
+        var className = mediator.Name;
+        var namespaceName = mediator.ContainingNamespace.IsGlobalNamespace
+            ? null
+            : mediator.ContainingNamespace.ToDisplayString();
+        var accessibility = mediator.DeclaredAccessibility.ToString().ToLowerInvariant();
+
         var iRequestType = analysis.RequestSymbol;
         var iNotificationType = analysis.NotificationSymbol;
         var handlers = analysis.Handlers;
@@ -134,23 +141,23 @@ public static class CodeGenerator
                using System.Collections.Frozen;
                #endif
                
-               namespace Mediator.Switch;
+               {{(namespaceName != null ? $"namespace {namespaceName};" : "")}}
                
                #pragma warning disable CS1998
                
-               internal class SwitchMediator : IMediator
+               {{accessibility}} partial class {{className}} : global::Mediator.Switch.IMediator
                {
                    #region Fields
                
                    {{string.Join("\n    ", handlerFields.Concat(behaviorFields).Concat(notificationBehaviorFields).Concat(notificationHandlerFields))}}
                
-                   private readonly ISwitchMediatorServiceProvider _svc;
+                   private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
                
                    #endregion
                
                    #region Constructor
                
-                   public SwitchMediator(ISwitchMediatorServiceProvider serviceProvider)
+                   public {{className}}(global::Mediator.Switch.ISwitchMediatorServiceProvider serviceProvider)
                    {
                        _svc = serviceProvider;
                    }
@@ -162,7 +169,7 @@ public static class CodeGenerator
                        get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
                    }
                
-                   public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
+                   public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
                    {
                        if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
                        {
@@ -174,7 +181,7 @@ public static class CodeGenerator
                
                    private static class SendSwitchCase
                    {
-                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<{{className}}, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<{{className}}, object, global::System.Threading.CancellationToken, object>)[]
                        {
                {{string.Join(",\n", sendCases)}}
                        }
@@ -186,7 +193,7 @@ public static class CodeGenerator
                            (t => t.Item1, t => t.Item2);
                    }
                
-                   public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
+                   public global::System.Threading.Tasks.Task Publish(global::Mediator.Switch.INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
                    {
                        if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
                        {
@@ -198,7 +205,7 @@ public static class CodeGenerator
                
                    private static class PublishSwitchCase
                    {
-                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<{{className}}, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<{{className}}, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
                        {
                {{string.Join(",\n", publishCases)}}
                        }

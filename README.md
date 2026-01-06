@@ -16,24 +16,38 @@ Aside from performance, SwitchMediator is first and foremost designed to overcom
 
 ## Table of Contents
 
+*   [What's New in V3](#whats-new-in-v3)
 *   [What's New in V2](#whats-new-in-v2)
 *   [Why SwitchMediator?](#why-switchmediator)
 *   [Key Advantages Over Reflection-Based Mediators](#key-advantages-over-reflection-based-mediators)
 *   [Features](#features)
 *   [Installation](#installation)
 *   [Usage Example](#usage-example)
-    *   [DI Setup](#di-setup)
-    *   [Sending Requests & Publishing Notifications](#sending-requests--publishing-notifications)
-    *   [Notification Pipelines (Resilience & Retries)](#notification-pipelines-resilience--retries)
-    *   [Example Output](#example-output)
+    *   [1. Define the Mediator](#1-define-the-mediator)
+    *   [2. DI Setup](#2-di-setup)
+    *   [3. Sending Requests & Publishing Notifications](#3-sending-requests--publishing-notifications)
 *   [License](#license)
+
+---
+
+## What's New in V3
+
+### ⚠️ Breaking Change: User-Defined Partial Class
+In previous versions, the library automatically generated a class named `SwitchMediator`. In V3, **you must define the mediator class yourself** as a `partial class` and mark it with the `[SwitchMediator]` attribute.
+
+**Why?**
+*   **Namespace Control:** You can now place the mediator in any namespace you choose.
+*   **Visibility Control:** You decide if your mediator is `public` or `internal`.
+
+### ⚠️ Breaking Change: `KnownTypes` Location
+The `KnownTypes` property is no longer on a static `SwitchMediator` class. It is now generated as a static property on **your** custom partial class.
 
 ---
 
 ## What's New in V2
 
 ### 1. Notification Pipeline Behaviors (`INotificationPipelineBehavior`)
-V2 introduces support for pipeline behaviors on Notifications.
+V2 introduced support for pipeline behaviors on Notifications.
 
 Since Requests have a single handler, the pipeline wraps that single execution path. However, Notifications are broadcast to multiple handlers. SwitchMediator wraps **each handler execution independently** in its own pipeline scope.
 
@@ -52,17 +66,10 @@ To further optimize performance and reduce memory allocations, the signature for
 await next(); // Implicitly captured token, caused allocation
 ```
 
-**After (V2):**
+**After (V2+):**
 ```csharp
 await next(cancellationToken); // Explicit pass, zero allocation
 ```
-
-### 3. ⚠️ Breaking Change: `SwitchMediator` is now `internal`
-The generated `SwitchMediator` class is now `internal` instead of `public`.
-
-**Why?** This prevents type name conflicts when multiple projects in the same solution use the source generator (e.g., a `Core` project and a `Web` project). Each project now gets its own isolated mediator implementation.
-
-**Impact:** You must register the mediator (`services.AddMediator<SwitchMediator>...`) within the project where the source generator is running, or expose internals if your composition root is in a different assembly.
 
 ---
 
@@ -80,20 +87,19 @@ Traditional mediator implementations often rely on runtime reflection to discove
 ## Key Advantages Over Reflection-Based Mediators
 
 *   🚀 **Maximum Performance:** Eliminates runtime reflection and dictionary lookups for dispatch. Uses compile-time `switch` statements and direct method calls. Ideal for performance-critical paths and high-throughput applications.
-*   🧐 **Enhanced Debuggability:** You can directly **step into the generated `SwitchMediator.g.cs` file**! See the exact `switch` statement matching your request, observe the explicit nesting of pipeline behavior calls (`await next(...)`), and step directly into your handler code. This provides unparalleled transparency compared to debugging reflection-based dispatch logic.
+*   🧐 **Enhanced Debuggability:** You can directly **step into the generated code**! See the exact `switch` statement matching your request, observe the explicit nesting of pipeline behavior calls (`await next(...)`), and step directly into your handler code. This provides unparalleled transparency compared to debugging reflection-based dispatch logic.
 *   ✅ **Compile-Time Safety:** Handler discovery happens during the build. Missing request handlers result in **build errors**, not runtime exceptions, catching issues earlier in the development cycle.
-*   ✂️ **Trimming / AOT Friendly:** Avoids runtime reflection, making the dispatch mechanism inherently more compatible with .NET trimming and AOT compilation. The sample console app runs with PublishAot enabled. (Note: Ensure handlers and dependencies are also trimming/AOT safe).
-*   🔍 **Explicitness:** The generated code serves as clear, inspectable documentation of how requests are routed and pipelines are constructed for each message type. Attributes are provided to ease navigating between Request and its handler, as well as to order pipeline behaviors. Ordering of notification handlers can also be explicitly specified.
+*   ✂️ **Trimming / AOT Friendly:** Avoids runtime reflection, making the dispatch mechanism inherently more compatible with .NET trimming and AOT compilation.
+*   🔍 **Explicitness:** The generated code serves as clear, inspectable documentation of how requests are routed and pipelines are constructed for each message type.
 
 ## Features
 
 *   Request/Response messages (`IRequest<TResponse>`, `IRequestHandler<TRequest, TResponse>`)
 *   Notification messages (`INotification`, `INotificationHandler<TNotification>`)
 *   Pipeline Behaviors (`IPipelineBehavior<TRequest, TResponse>`) for cross-cutting concerns.
-*   **[NEW]** Notification Pipeline Behaviors (`INotificationPipelineBehavior<TNotification>`) for per-handler middleware.
+*   Notification Pipeline Behaviors (`INotificationPipelineBehavior<TNotification>`) for per-handler middleware (Resilience, Retries, etc.).
 *   Native support for Result pattern (e.g. [FluentResults](https://github.com/altmann/FluentResults)).
 *   Flexible Pipeline Behavior Ordering via `[PipelineBehaviorOrder(int order)]`.
-*   Pipeline Behavior Constraints using standard C# generic constraints (`where TRequest : ...`).
 *   Explicit Notification Handler Ordering via DI configuration.
 *   Seamless integration with `Microsoft.Extensions.DependencyInjection`.
 
@@ -101,8 +107,8 @@ Traditional mediator implementations often rely on runtime reflection to discove
 
 You'll typically need two packages:
 
-1. **`Mediator.Switch.SourceGenerator`:** The SwitchMediator source generator itself, typically in the outermost project where your mediator related classes would reside. The source generator assembly does *not* get packaged with your application.
-2. **`Mediator.Switch.Extensions.Microsoft.DependencyInjection`:** (Optional) Provides extension methods for easy registration with the standard .NET DI container. You can always manually register your DI instances.
+1. **`Mediator.Switch.SourceGenerator`:** The SwitchMediator source generator itself.
+2. **`Mediator.Switch.Extensions.Microsoft.DependencyInjection`:** (Optional) Provides extension methods for easy registration with the standard .NET DI container.
 
 ```bash
 dotnet add package Mediator.Switch.SourceGenerator
@@ -113,16 +119,32 @@ dotnet add package Mediator.Switch.Extensions.Microsoft.DependencyInjection
 
 Refer to [Sample app](sample/Sample.ConsoleApp) for more information.
 
-### DI Setup
+### 1. Define the Mediator
 
-Register SwitchMediator and its dependencies (handlers, behaviors, validators) in your application's composition root (e.g., `Program.cs`).
+Create a `partial class` in your project and mark it with `[SwitchMediator]`. This tells the source generator where to generate the dispatch logic.
+
+> **Note:** Because this class is instantiated via Dependency Injection (Reflection), your IDE might warn that the class is unused. You can suppress this warning as shown below.
+
+```csharp
+using Mediator.Switch;
+using System.Diagnostics.CodeAnalysis;
+
+namespace My.Application;
+
+[SwitchMediator]
+[SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Instantiated via DI")]
+public partial class AppMediator; 
+```
+
+### 2. DI Setup
+
+Register your custom mediator class in your application's composition root (e.g., `Program.cs`).
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Mediator.Switch;
 using Mediator.Switch.Extensions.Microsoft.DependencyInjection;
-using System;
-using System.Threading.Tasks;
+using My.Application; // Namespace where you defined AppMediator
 
 public static class Program
 {
@@ -131,13 +153,13 @@ public static class Program
         var services = new ServiceCollection();
 
         // --- SwitchMediator Registration ---
-        // 1. Register SwitchMediator itself.
-        services.AddMediator<SwitchMediator>(op =>
+        // Register your custom partial class.
+        // The extension method automatically finds the generated 'KnownTypes' on AppMediator.
+        services.AddMediator<AppMediator>(op =>
         {
-            // 2. Pass compile-time pre-discovered types containing handlers, messages, behaviors for scanning and specify service lifetime.
-            op.KnownTypes = SwitchMediator.KnownTypes;
-            op.ServiceLifetime = ServiceLifetime.Singleton;
-            // 3. Optionally, specify notification handler order.
+            op.ServiceLifetime = ServiceLifetime.Scoped;
+            
+            // Optional: Specify notification handler order
             op.OrderNotificationHandlers<UserLoggedInEvent>(
                 typeof(UserLoggedInLogger),
                 typeof(UserLoggedInAnalytics)
@@ -146,111 +168,29 @@ public static class Program
 
         // --- Build and Scope ---
         var serviceProvider = services.BuildServiceProvider();
-        using var scope = serviceProvider.CreateScope(); // Simulate a request scope
+        using var scope = serviceProvider.CreateScope();
 
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
 
-        // --- Execute Logic ---
         await RunSampleLogic(sender, publisher);
-    }
-
-    public static async Task RunSample(ISender sender, IPublisher publisher)
-    {
-        // See next section
     }
 }
 ```
 
-### Sending Requests & Publishing Notifications
+### 3. Sending Requests & Publishing Notifications
 
 Inject `ISender` and `IPublisher` into your services (controllers, etc.) and use them to dispatch messages.
 
 ```csharp
-// Inside the RunSampleLogic method from above
-
-public static async Task RunSample(ISender sender, IPublisher publisher)
+public static async Task RunSampleLogic(ISender sender, IPublisher publisher)
 {
-    Console.WriteLine("--- Sending GetUserRequest ---");
-    string userResult = await sender.Send(new Sample.GetUserRequest(123));
-    Console.WriteLine($"--> Result: {userResult}\n");
-
-    Console.WriteLine("--- Sending CreateOrderRequest ---");
-    int orderResult = await sender.Send(new Sample.CreateOrderRequest("Gadget"));
-    Console.WriteLine($"--> Result: {orderResult}\n");
-
-    Console.WriteLine("--- Publishing UserLoggedInEvent ---");
-    await publisher.Publish(new Sample.UserLoggedInEvent(123));
-    Console.WriteLine("--- Notification Published ---\n");
-
-    Console.WriteLine("--- Sending Request with Validation Failure ---");
-    try
-    {
-        await sender.Send(new Sample.GetUserRequest(-1));
-    }
-    catch (FluentValidation.ValidationException ex)
-    {
-        Console.WriteLine($"--> Caught Expected ValidationException: {ex.Errors.FirstOrDefault()?.ErrorMessage}\n");
-    }
+    // Send a Request
+    var response = await sender.Send(new GetUserRequest(123));
+    
+    // Publish a Notification
+    await publisher.Publish(new UserLoggedInEvent(123));
 }
-```
-
-### Notification Pipelines (Resilience & Retries)
-
-Demonstrates how to wrap notification handlers with middleware using `INotificationPipelineBehavior<TNotification>`.
-*   **Isolation:** Notification behaviors wrap *each individual handler execution*.
-*   **Resilience (Swallowing Exceptions):** For non-critical handlers, catch and log exceptions from a specific handler so others continue running.
-*   **Retries (Polly Integration):** Because the behavior wraps the handler, you can easily implement retry policies using libraries like Polly.
-
-**Example: Using Polly for Retries**
-```csharp
-public class PollyRetryBehavior<TNotification> : INotificationPipelineBehavior<TNotification>
-    where TNotification : IRetryableNotification
-{
-    // Define a simple retry policy (e.g., retry 3 times)
-    private readonly AsyncRetryPolicy _retryPolicy = Policy
-        .Handle<Exception>()
-        .RetryAsync(3);
-
-    public async Task Handle(TNotification notification, NotificationHandlerDelegate next, CancellationToken cancellationToken)
-    {
-        // Execute the handler (next) within the Polly policy
-        await _retryPolicy.ExecuteAsync(async (ct) => await next(ct), cancellationToken);
-    }
-}
-```
-
-### Example Output
-
-From `Sample.Program`:
-
-```text
---- Sending GetUserRequest ---
-Logging: Handling GetUserRequest
-Audit: Processing request at 27/3/2025 3:53:07 pm
-Audit: Completed request at 27/3/2025 3:53:07 pm
-Logging: Handled GetUserRequest
---> Result: User 123 at 27/3/2025 3:53:07 pm
-
---- Sending CreateOrderRequest ---
-Logging: Handling CreateOrderRequest
-Transaction: Starting with ID 0a12d204-8547-41e8-b6ca-d89098081ab6
-Transaction: Completed with ID 0a12d204-8547-41e8-b6ca-d89098081ab6
-Logging: Handled CreateOrderRequest
---> Result: 42
-
---- Publishing UserLoggedInEvent ---
-Logged: User 123 logged in.
-Analytics: User 123 tracked.
---- Notification Published ---
-
---- Sending GetUserRequest with Validation Failure ---
-Logging: Handling GetUserRequest
---> Caught Expected ValidationException: UserId must be positive
-
---- Sending CreateOrderRequest with Validation Failure ---
-Logging: Handling CreateOrderRequest
---> Caught Expected ValidationException: Product cannot be empty
 ```
 
 ---

@@ -6,6 +6,7 @@ namespace Mediator.Switch.SourceGenerator;
 /// Aggregated semantic analysis results produced by <see cref="SemanticAnalyzer"/>.
 /// </summary>
 public record SemanticAnalysis(
+    INamedTypeSymbol? MediatorClass,
     INamedTypeSymbol RequestSymbol,
     INamedTypeSymbol NotificationSymbol,
     List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> Handlers,

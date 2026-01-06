@@ -5,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Mediator.Switch.Benchmark;
 
+[SwitchMediator]
+public partial class SwitchMediator;
+
 [MemoryDiagnoser]
 [MarkdownExporterAttribute.GitHub]
 [GroupBenchmarksBy(BenchmarkDotNet.Configs.BenchmarkLogicalGroupRule.ByCategory)]
@@ -152,7 +155,7 @@ public class HandlerScalingBenchmarks
             throw new InvalidOperationException($"Validation failed for {name}", ex);
         }
     }
-    
+
     private void ValidateSwitchMediator(IServiceProvider provider)
     {
         const string name = "SwitchMediator";
