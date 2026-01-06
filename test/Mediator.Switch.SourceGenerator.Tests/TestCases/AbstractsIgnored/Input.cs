@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.AbstractsIgnored;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 public class Ping : IRequest<string>;
 public class PingHandler<TIgnoreMe> : IRequestHandler<Ping, string>
 {

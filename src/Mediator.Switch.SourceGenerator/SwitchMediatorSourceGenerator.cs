@@ -22,12 +22,14 @@ namespace Mediator.Switch.SourceGenerator
                 var cancellationToken = context.CancellationToken;
                 var analyzer = new SemanticAnalyzer(context.Compilation);
                 var analysis = analyzer.Analyze(receiver.Types, cancellationToken);
+                if (analysis.MediatorClass == null)
+                    return;
 
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var sourceCode = CodeGenerator.Generate(analysis);
 
-                context.AddSource("SwitchMediator.g.cs", sourceCode);
+                context.AddSource($"{analysis.MediatorClass.Name}.g.cs", sourceCode);
             }
             catch (InvalidOperationException ex)
             {

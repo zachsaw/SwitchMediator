@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.BasicRecordType;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 [RequestHandler(typeof(PingHandler))]
 public record Ping : IRequest<string>;
 public record PingHandler : IRequestHandler<Ping, string>

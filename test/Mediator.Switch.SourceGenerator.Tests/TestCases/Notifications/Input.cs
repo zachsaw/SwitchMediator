@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.Notifications;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 // The Notification
 public class OrderCreatedEvent : INotification
 {

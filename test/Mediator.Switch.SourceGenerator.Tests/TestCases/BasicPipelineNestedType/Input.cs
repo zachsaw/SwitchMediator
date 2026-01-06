@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.BasicPipelineNestedType;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 public interface IResult<out T>
 {
     T Value { get; }

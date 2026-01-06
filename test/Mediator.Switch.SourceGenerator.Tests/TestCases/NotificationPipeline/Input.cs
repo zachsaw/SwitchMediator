@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.NotificationPipeline;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 // Notification
 public class Alert : INotification
 {

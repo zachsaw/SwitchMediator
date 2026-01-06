@@ -21,24 +21,24 @@ using System.Threading.Tasks;
 using System.Collections.Frozen;
 #endif
 
-namespace Mediator.Switch;
+namespace Tests.Notifications;
 
 #pragma warning disable CS1998
 
-internal class SwitchMediator : IMediator
+public partial class TestMediator : global::Mediator.Switch.IMediator
 {
     #region Fields
 
     private global::Tests.Notifications.SimpleRequestHandler? _tests_Notifications_SimpleRequestHandler;
     private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Notifications.OrderCreatedEvent>>? _tests_Notifications_OrderCreatedEvent__Handlers;
 
-    private readonly ISwitchMediatorServiceProvider _svc;
+    private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
     #endregion
 
     #region Constructor
 
-    public SwitchMediator(ISwitchMediatorServiceProvider serviceProvider)
+    public TestMediator(global::Mediator.Switch.ISwitchMediatorServiceProvider serviceProvider)
     {
         _svc = serviceProvider;
     }
@@ -50,7 +50,7 @@ internal class SwitchMediator : IMediator
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
-    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
         {
@@ -62,7 +62,7 @@ internal class SwitchMediator : IMediator
 
     private static class SendSwitchCase
     {
-        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, object, global::System.Threading.CancellationToken, object>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<TestMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<TestMediator, object, global::System.Threading.CancellationToken, object>)[]
         {
             ( // case Tests.Notifications.SimpleRequest:
                 typeof(global::Tests.Notifications.SimpleRequest), (instance, request, cancellationToken) =>
@@ -78,7 +78,7 @@ internal class SwitchMediator : IMediator
             (t => t.Item1, t => t.Item2);
     }
 
-    public global::System.Threading.Tasks.Task Publish(INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
+    public global::System.Threading.Tasks.Task Publish(global::Mediator.Switch.INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
         {
@@ -90,7 +90,7 @@ internal class SwitchMediator : IMediator
 
     private static class PublishSwitchCase
     {
-        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<SwitchMediator, INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<TestMediator, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<TestMediator, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
         {
             ( // case Tests.Notifications.OrderCreatedEvent:
                 typeof(global::Tests.Notifications.OrderCreatedEvent), async (instance, notification, cancellationToken) =>

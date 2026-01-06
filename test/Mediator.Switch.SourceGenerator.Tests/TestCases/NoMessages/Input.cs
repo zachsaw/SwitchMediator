@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Tests.NoMessages;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 public class UtilityClass
 {
     public static string GetVersion() => "1.0";

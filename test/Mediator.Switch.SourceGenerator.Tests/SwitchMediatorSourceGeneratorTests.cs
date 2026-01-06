@@ -39,7 +39,7 @@ public class SwitchMediatorSourceGeneratorTests : CSharpSourceGeneratorTest<Swit
 
         TestCode = inputCode;
         TestState.GeneratedSources.Add(
-            (typeof(SwitchMediatorSourceGenerator), "SwitchMediator.g.cs", Normalize(expectedOutput))
+            (typeof(SwitchMediatorSourceGenerator), "TestMediator.g.cs", Normalize(expectedOutput))
         );
         await RunAsync();
     }

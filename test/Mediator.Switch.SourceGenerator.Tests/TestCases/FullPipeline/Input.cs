@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Tests.FullPipeline;
 
+[SwitchMediator]
+public partial class TestMediator;
+
 #pragma warning disable CS1998
 
 public interface IAuditableRequest
