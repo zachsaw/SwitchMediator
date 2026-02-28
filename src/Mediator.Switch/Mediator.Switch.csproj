@@ -10,6 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
         <ProjectReference Include="..\Mediator.Switch.Analyzer\Mediator.Switch.Analyzer.csproj"
                           ReferenceOutputAssembly="false" />
         <None Include="..\Mediator.Switch.Analyzer\bin\$(Configuration)\netstandard2.0\Mediator.Switch.Analyzer.dll"

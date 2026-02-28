@@ -5,7 +5,7 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class BehaviorChainBuilder
 {
-    public static string BuildRequest(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
+    public static string BuildRequest(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> behaviors,
         string requestName,
         string coreHandler)
     {
@@ -21,7 +21,7 @@ public static class BehaviorChainBuilder
     }
 
     public static string BuildNotification(
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> behaviors,
         string notificationName,
         string notificationVariableName,
         string coreHandler)

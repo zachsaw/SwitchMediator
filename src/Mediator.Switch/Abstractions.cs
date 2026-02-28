@@ -1,3 +1,6 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Mediator.Switch;
 
 public interface ISender
@@ -57,4 +60,47 @@ public interface INotificationPipelineBehavior<in TRequest> where TRequest : not
 public interface ISwitchMediatorServiceProvider
 {
     T Get<T>() where T : notnull;
+}
+
+public interface IValueSender
+{
+    /// <summary>
+    /// Sends a request to a single handler and returns the response as a ValueTask.
+    /// </summary>
+    ValueTask<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
+}
+
+public interface IValuePublisher
+{
+    /// <summary>
+    /// Publishes a notification to multiple handlers and returns a ValueTask.
+    /// </summary>
+    ValueTask Publish(INotification notification, CancellationToken cancellationToken = default);
+}
+
+public interface IValueMediator : IValueSender, IValuePublisher;
+
+public interface IValueRequestHandler<in TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    ValueTask<TResponse> Handle(TRequest request, CancellationToken cancellationToken);
+}
+
+public interface IValueNotificationHandler<in TNotification>
+{
+    ValueTask Handle(TNotification notification, CancellationToken cancellationToken);
+}
+
+public delegate ValueTask<TResponse> ValueRequestHandlerDelegate<TResponse>(CancellationToken cancellationToken);
+
+public interface IValuePipelineBehavior<in TRequest, TResponse> where TRequest : notnull
+{
+    ValueTask<TResponse> Handle(TRequest request, ValueRequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken);
+}
+
+public delegate ValueTask ValueNotificationHandlerDelegate(CancellationToken cancellationToken);
+
+public interface IValueNotificationPipelineBehavior<in TNotification> where TNotification : notnull
+{
+    ValueTask Handle(TNotification notification, ValueNotificationHandlerDelegate next, CancellationToken cancellationToken);
 }

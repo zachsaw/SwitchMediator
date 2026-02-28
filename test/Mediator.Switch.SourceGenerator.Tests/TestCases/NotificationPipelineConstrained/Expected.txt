@@ -25,7 +25,7 @@ namespace Tests.NotificationPipelineConstrained;
 
 #pragma warning disable CS1998
 
-public partial class TestMediator : global::Mediator.Switch.IMediator
+public partial class TestMediator : global::Mediator.Switch.IMediator, global::Mediator.Switch.IValueMediator
 {
     #region Fields
 
@@ -53,7 +53,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator
 
     public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
-        if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
+        if (TaskSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
         {
             return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
         }
@@ -61,7 +61,31 @@ public partial class TestMediator : global::Mediator.Switch.IMediator
         throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
     }
 
-    private static class SendSwitchCase
+    private static class TaskSendSwitchCase
+    {
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<TestMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<TestMediator, object, global::System.Threading.CancellationToken, object>)[]
+        {
+
+        }
+#if NET8_0_OR_GREATER
+        .ToFrozenDictionary
+#else
+        .ToDictionary
+#endif
+            (t => t.Item1, t => t.Item2);
+    }
+
+    global::System.Threading.Tasks.ValueTask<TResponse> global::Mediator.Switch.IValueSender.Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken)
+    {
+        if (ValueSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
+        {
+            return (global::System.Threading.Tasks.ValueTask<TResponse>)handle(this, request, cancellationToken);
+        }
+
+        throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
+    }
+
+    private static class ValueSendSwitchCase
     {
         public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<TestMediator, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<TestMediator, object, global::System.Threading.CancellationToken, object>)[]
         {
@@ -77,15 +101,20 @@ public partial class TestMediator : global::Mediator.Switch.IMediator
 
     public global::System.Threading.Tasks.Task Publish(global::Mediator.Switch.INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
     {
-        if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
+        if (TaskPublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
         {
             return handle(this, notification, cancellationToken);
+        }
+
+        if (ValuePublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var valueHandle))
+        {
+            return valueHandle(this, notification, cancellationToken).AsTask();
         }
 
         return global::System.Threading.Tasks.Task.CompletedTask;
     }
 
-    private static class PublishSwitchCase
+    private static class TaskPublishSwitchCase
     {
         public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<TestMediator, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<TestMediator, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
         {
@@ -119,6 +148,35 @@ public partial class TestMediator : global::Mediator.Switch.IMediator
                     }
                 }
             )
+        }
+#if NET8_0_OR_GREATER
+        .ToFrozenDictionary
+#else
+        .ToDictionary
+#endif
+            (t => t.Item1, t => t.Item2);
+    }
+
+    global::System.Threading.Tasks.ValueTask global::Mediator.Switch.IValuePublisher.Publish(global::Mediator.Switch.INotification notification, global::System.Threading.CancellationToken cancellationToken)
+    {
+        if (ValuePublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
+        {
+            return handle(this, notification, cancellationToken);
+        }
+
+        if (TaskPublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var taskHandle))
+        {
+            return new global::System.Threading.Tasks.ValueTask(taskHandle(this, notification, cancellationToken));
+        }
+
+        return global::System.Threading.Tasks.ValueTask.CompletedTask;
+    }
+
+    private static class ValuePublishSwitchCase
+    {
+        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<TestMediator, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask>> Cases = new (global::System.Type, global::System.Func<TestMediator, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask>)[]
+        {
+
         }
 #if NET8_0_OR_GREATER
         .ToFrozenDictionary

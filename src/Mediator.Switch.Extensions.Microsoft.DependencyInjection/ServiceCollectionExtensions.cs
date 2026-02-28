@@ -43,6 +43,14 @@ public static class ServiceCollectionExtensions
         services.Add(new ServiceDescriptor(typeof(ISender), sp => sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
         services.Add(new ServiceDescriptor(typeof(IPublisher), sp => sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
 
+        // Register IValueMediator if the mediator implements it
+        if (typeof(IValueMediator).IsAssignableFrom(typeof(TSwitchMediator)))
+        {
+            services.Add(new ServiceDescriptor(typeof(IValueMediator), sp => (IValueMediator)sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
+            services.Add(new ServiceDescriptor(typeof(IValueSender), sp => sp.GetRequiredService<IValueMediator>(), options.ServiceLifetime));
+            services.Add(new ServiceDescriptor(typeof(IValuePublisher), sp => sp.GetRequiredService<IValueMediator>(), options.ServiceLifetime));
+        }
+
         if (options.KnownTypes != default)
         {
             RegisterRequestHandlers(services, options.KnownTypes.RequestHandlerTypes, options);
@@ -77,10 +85,22 @@ public static class ServiceCollectionExtensions
 
             foreach (var handlerType in n.HandlerTypes)
             {
-                services.Add(new ServiceDescriptor(
-                    typeof(INotificationHandler<>).MakeGenericType(n.NotificationType),
-                    handlerType,
-                    options.ServiceLifetime));
+                // Register as IValueNotificationHandler if applicable, otherwise INotificationHandler
+                var valueNotifHandlerType = typeof(IValueNotificationHandler<>).MakeGenericType(n.NotificationType);
+                if (valueNotifHandlerType.IsAssignableFrom(handlerType))
+                {
+                    services.Add(new ServiceDescriptor(
+                        valueNotifHandlerType,
+                        handlerType,
+                        options.ServiceLifetime));
+                }
+                else
+                {
+                    services.Add(new ServiceDescriptor(
+                        typeof(INotificationHandler<>).MakeGenericType(n.NotificationType),
+                        handlerType,
+                        options.ServiceLifetime));
+                }
             }
         }
     }
