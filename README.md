@@ -61,25 +61,46 @@ The generated mediator class now implements **both** `IMediator` and `IValueMedi
 | :--- | :--- |
 | `IValuePublisher.Publish` + `IValueNotificationHandler` | **Zero** allocation in the dispatch layer |
 | `IPublisher.Publish` + `INotificationHandler` (existing) | Already zero allocation (unchanged) |
-| `IValueSender.Send` + `IValueRequestHandler` | **Zero** allocation in the dispatch layer — eliminates both the `Task<T>` heap object and any boxing |
+| `IValueSender.Send` + `IValueRequestHandler` | **Zero** allocation — fully alloc-free in the mediator infrastructure |
 | `ISender.Send` + `IRequestHandler` (existing) | ~96 B per call (unchanged) |
 
-> **Note:** Both `IValuePublisher.Publish` and `IValueSender.Send` achieve zero allocation in the dispatch layer. The generated dictionaries store delegates as `object` and `Unsafe.As` is used to reinterpret them without a type check or boxing, so `ValueTask<TResponse>` (a struct) is never wrapped in a heap object.
+> **Note:** `IValueSender.Send` paired with `IValueRequestHandler` (and no pipeline behaviors) is fully alloc-free. `IValuePublisher.Publish` uses the same zero-cost dictionary routing, but the generated notification fan-out uses async iteration, which may allocate when your handlers are genuinely asynchronous (as per normal usage of .net `ValueTask`).
 
 ### New Compile-Time Analyzer: **SMD002**
 
 A new `PipelineConsistencyAnalyzer` (diagnostic ID `SMD002`) reports a **build error** if you accidentally mix `IPipelineBehavior` (Task) behaviors with `IValueRequestHandler` (ValueTask) handlers, or vice versa.
 
-```csharp
-// ❌ SMD002 error: ValidationBehavior (IPipelineBehavior) applied to a ValueTask handler
-public class FastStatusCheckHandler : IValueRequestHandler<FastStatusCheckRequest, bool> { ... }
-public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull { ... }  // This would apply to FastStatusCheckRequest — compile error!
+**Why does this happen?** 
 
-// ✅ Fix: Use a marker interface to scope behaviors to the correct pipeline
+SwitchMediator automatically applies behaviors to handlers based on generic constraints. A behavior like `ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull` applies to **all** requests (since all requests satisfy `notnull`). If you also have a ValueTask handler for the same request type, the analyzer detects the mismatch and reports SMD002.
+
+```csharp
+// ❌ SMD002 error: Generic IPipelineBehavior applies to ValueTask handler
+public class FastStatusCheckHandler : IValueRequestHandler<FastStatusCheckRequest, bool> { ... }
+
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull, IValidatable { ... }  // Now only applies to IValidatable requests
+    where TRequest : notnull  // This applies to ALL requests — including FastStatusCheckRequest!
+{ ... }
+
+// ✅ Fix 1: Constrain the behavior so it only applies to specific requests
+public interface IValidatable { }
+
+public class FastStatusCheckRequest : IRequest<bool> { ... }  // No IValidatable — behavior doesn't apply
+public class UserUpdateRequest : IRequest<bool>, IValidatable { ... }  // Has IValidatable — behavior applies
+
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull, IValidatable  // Now only applies to requests implementing IValidatable
+{ ... }
+
+// ✅ Fix 2: Create a matching ValueTask version for behaviors that should apply to both pipelines
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull { ... }  // For Task handlers
+
+public class ValidationValueBehavior<TRequest, TResponse> : IValuePipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull { ... }  // For ValueTask handlers
 ```
+
+**How the analyzer works:** The analyzer checks each behavior's generic constraints against handler types. A behavior only applies if the request type satisfies all of its constraints (e.g., `where TRequest : notnull, IValidatable`). This allows you to selectively apply behaviors to specific request types while avoiding cross-pipeline contamination.
 
 ### DI Registration
 
@@ -87,7 +108,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
 ```csharp
 // All six interfaces are available after a single AddMediator call
-var sender = sp.GetRequiredService<ISender>();          // Task-based
+var sender = sp.GetRequiredService<ISender>();           // Task-based
 var valueSender = sp.GetRequiredService<IValueSender>(); // ValueTask-based (zero extra setup)
 ```
 
