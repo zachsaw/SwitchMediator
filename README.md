@@ -22,7 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
-* [What's New in V4](#whats-new-in-v4)
+* [What's New in V3.1](#whats-new-in-v31)
 * [What's New in V3](#whats-new-in-v3)
 * [What's New in V2](#whats-new-in-v2)
 * [Why SwitchMediator?](#why-switchmediator)
@@ -35,11 +35,11 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
  ---
 
-## What's New in V4
+## What's New in V3.1
 
 ### Hybrid `ValueTask` Support
 
-V4 introduces `IValueMediator`, `IValueSender`, and `IValuePublisher` — a parallel set of interfaces that dispatch via `ValueTask` instead of `Task`.
+V3.1 introduces `IValueMediator`, `IValueSender`, and `IValuePublisher` — a parallel set of interfaces that dispatch via `ValueTask` instead of `Task`.
 
 The generated mediator class now implements **both** `IMediator` and `IValueMediator` simultaneously. You can inject whichever interface suits your performance needs.
 
@@ -61,10 +61,10 @@ The generated mediator class now implements **both** `IMediator` and `IValueMedi
 | :--- | :--- |
 | `IValuePublisher.Publish` + `IValueNotificationHandler` | **Zero** allocation in the dispatch layer |
 | `IPublisher.Publish` + `INotificationHandler` (existing) | Already zero allocation (unchanged) |
-| `IValueSender.Send` + `IValueRequestHandler` | **Reduced** allocation vs. Task path — eliminates the `Task<T>` heap object for synchronous handlers |
+| `IValueSender.Send` + `IValueRequestHandler` | **Zero** allocation in the dispatch layer — eliminates both the `Task<T>` heap object and any boxing |
 | `ISender.Send` + `IRequestHandler` (existing) | ~96 B per call (unchanged) |
 
-> **Note:** `IValuePublisher.Publish` achieves zero allocation because the dispatch dictionary returns `ValueTask` (a struct) directly, without boxing. `IValueSender.Send` still has a small boxing overhead due to the generic dictionary constraint — but is measurably cheaper than the `Task<T>` path for synchronous handlers.
+> **Note:** Both `IValuePublisher.Publish` and `IValueSender.Send` achieve zero allocation in the dispatch layer. The generated dictionaries store delegates as `object` and `Unsafe.As` is used to reinterpret them without a type check or boxing, so `ValueTask<TResponse>` (a struct) is never wrapped in a heap object.
 
 ### New Compile-Time Analyzer: **SMD002**
 
