@@ -83,24 +83,16 @@ public static class ServiceCollectionExtensions
                 Sort(n.HandlerTypes, orderedHandlerTypes);
             }
 
+            var valueNotifHandlerType = typeof(IValueNotificationHandler<>).MakeGenericType(n.NotificationType);
+            var taskNotifHandlerType = typeof(INotificationHandler<>).MakeGenericType(n.NotificationType);
+
             foreach (var handlerType in n.HandlerTypes)
             {
                 // Register as IValueNotificationHandler if applicable, otherwise INotificationHandler
-                var valueNotifHandlerType = typeof(IValueNotificationHandler<>).MakeGenericType(n.NotificationType);
-                if (valueNotifHandlerType.IsAssignableFrom(handlerType))
-                {
-                    services.Add(new ServiceDescriptor(
-                        valueNotifHandlerType,
-                        handlerType,
-                        options.ServiceLifetime));
-                }
-                else
-                {
-                    services.Add(new ServiceDescriptor(
-                        typeof(INotificationHandler<>).MakeGenericType(n.NotificationType),
-                        handlerType,
-                        options.ServiceLifetime));
-                }
+                services.Add(new ServiceDescriptor(
+                    valueNotifHandlerType.IsAssignableFrom(handlerType) ? valueNotifHandlerType : taskNotifHandlerType,
+                    handlerType,
+                    options.ServiceLifetime));
             }
         }
     }

@@ -75,11 +75,12 @@ public static class CodeGenerator
         var notificationHandlerFields = usedNotifications.SelectMany(n =>
         {
             var fields = new List<string>();
-            var hasTaskHandlers = notificationHandlers.Any(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default) && !h.IsValueTask);
-            var hasValueTaskHandlers = notificationHandlers.Any(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default) && h.IsValueTask);
-            if (hasTaskHandlers)
+            var handlersForN = notificationHandlers
+                .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
+                .ToList();
+            if (handlersForN.Any(h => !h.IsValueTask))
                 fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__Handlers;");
-            if (hasValueTaskHandlers)
+            if (handlersForN.Any(h => h.IsValueTask))
                 fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.IValueNotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__ValueHandlers;");
             return fields;
         });
