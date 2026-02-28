@@ -86,8 +86,9 @@ public class PipelineConsistencyAnalyzer : DiagnosticAnalyzer
             foreach (var handlerIface in taskHandlerInterfaces)
             {
                 var tRequest = handlerIface.TypeArguments[0];
+                var tResponse = handlerIface.TypeArguments[1];
                 var applicableValueBehaviors = behaviors
-                    .Where(b => b.IsValue && IsApplicable(b.BehaviorType, tRequest))
+                    .Where(b => b.IsValue && IsApplicable(b.BehaviorType, tRequest, tResponse))
                     .ToList();
 
                 foreach (var behavior in applicableValueBehaviors)
@@ -107,8 +108,9 @@ public class PipelineConsistencyAnalyzer : DiagnosticAnalyzer
             foreach (var handlerIface in valueHandlerInterfaces)
             {
                 var tRequest = handlerIface.TypeArguments[0];
+                var tResponse = handlerIface.TypeArguments[1];
                 var applicableTaskBehaviors = behaviors
-                    .Where(b => !b.IsValue && IsApplicable(b.BehaviorType, tRequest))
+                    .Where(b => !b.IsValue && IsApplicable(b.BehaviorType, tRequest, tResponse))
                     .ToList();
 
                 foreach (var behavior in applicableTaskBehaviors)
@@ -126,21 +128,43 @@ public class PipelineConsistencyAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static bool IsApplicable(INamedTypeSymbol behaviorType, ITypeSymbol tRequest)
+    private static bool IsApplicable(INamedTypeSymbol behaviorType, ITypeSymbol tRequest, ITypeSymbol tResponse)
     {
         if (behaviorType.TypeParameters.Length == 0) return false;
 
-        var typeParam = behaviorType.TypeParameters[0];
+        // Check TRequest (first type parameter) constraints
+        if (!IsTypeParameterSatisfied(behaviorType.TypeParameters[0], tRequest))
+            return false;
+
+        // Check TResponse (second type parameter, if present) constraints
+        if (behaviorType.TypeParameters.Length >= 2 &&
+            !IsTypeParameterSatisfied(behaviorType.TypeParameters[1], tResponse))
+            return false;
+
+        return true;
+    }
+
+    private static bool IsTypeParameterSatisfied(ITypeParameterSymbol typeParam, ITypeSymbol typeSymbol)
+    {
+        // No constraints at all → always satisfied
         if (typeParam.ConstraintTypes.Length == 0 && !typeParam.HasReferenceTypeConstraint &&
             !typeParam.HasValueTypeConstraint && !typeParam.HasNotNullConstraint)
         {
-            return true; // No constraints, applies to all
+            return true;
         }
 
+        // Check 'class' constraint
+        if (typeParam.HasReferenceTypeConstraint && !typeSymbol.IsReferenceType)
+            return false;
+
+        // Check 'struct' constraint
+        if (typeParam.HasValueTypeConstraint && !typeSymbol.IsValueType)
+            return false;
+
+        // Check specific type constraints (base class / interface)
         foreach (var constraint in typeParam.ConstraintTypes)
         {
-            // Check if tRequest is assignable to the constraint type
-            if (!IsAssignableTo(tRequest, constraint))
+            if (!IsAssignableTo(typeSymbol, constraint))
                 return false;
         }
 

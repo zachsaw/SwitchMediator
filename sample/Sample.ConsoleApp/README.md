@@ -30,14 +30,41 @@ This sample application demonstrates various technical capabilities of the **Swi
     }
     ```
 
-*   **Handler Discovery via Attribute:** Uses the `[RequestHandler]` attribute on request types to link them to their specific handler implementation, allowing easy navigation within the IDE. Note that this attribute is recommended not mandatory.
+*   **Zero-Allocation Dispatch with `IValueRequestHandler` / `IValueNotificationHandler`:** Use `IValueMediator` / `IValueSender` / `IValuePublisher` for the optimized dispatch path. ValueTask-based handlers eliminate `Task<T>` heap allocation, and ValueTask notification dispatch achieves zero allocation in the mediator dispatch layer.
 
     ```csharp
-    [RequestHandler(typeof(GetUserRequestHandler))] // Request to handler discovery (optional but recommended to ease code navigation)
-    public class GetUserRequest : IRequest<Result<User>>, IAuditableRequest
+    // Fast synchronous handler — no Task object allocated in the handler itself
+    public class FastStatusCheckHandler : IValueRequestHandler<FastStatusCheckRequest, bool>
     {
-        // ...
+        public ValueTask<bool> Handle(FastStatusCheckRequest request, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(true);
     }
+
+    // Zero-allocation notification handler
+    public class ServerStartedLogger : IValueNotificationHandler<ServerStartedEvent>
+    {
+        public ValueTask Handle(ServerStartedEvent notification, CancellationToken cancellationToken = default)
+        {
+            Console.WriteLine("Server started!");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    // Dispatching via IValueSender / IValuePublisher
+    var valueSender = serviceProvider.GetRequiredService<IValueSender>();
+    var valuePublisher = serviceProvider.GetRequiredService<IValuePublisher>();
+
+    bool ok = await valueSender.Send(new FastStatusCheckRequest());
+    await valuePublisher.Publish(new ServerStartedEvent());
+    ```
+
+    > **Design Note:** When using `IValueRequestHandler`, all applicable pipeline behaviors for that request must implement `IValuePipelineBehavior` (not `IPipelineBehavior`). The **SMD002** analyzer enforces this at compile time. A clean way to separate pipelines is via marker interfaces (e.g., `IValidatable`) that constrain which behaviors apply to which requests.
+
+*   **Handler Discovery via Attribute:** Uses the `[RequestHandler]` attribute on request types to link them to their specific handler implementation, allowing easy navigation within the IDE. This attribute now also accepts `IValueRequestHandler` handlers.
+
+    ```csharp
+    [RequestHandler(typeof(FastStatusCheckHandler))] // Works for IValueRequestHandler too
+    public class FastStatusCheckRequest : IRequest<bool> { }
     ```
 
 *   **Pipeline Behaviors (`IPipelineBehavior`):** Illustrates the middleware concept for requests:
@@ -55,6 +82,19 @@ This sample application demonstrates various technical capabilities of the **Swi
         public class AuditBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
             where TRequest : IAuditableRequest
         { /* ... */ }
+        ```
+    *   **Separation via Marker Interfaces:** Adding a marker (e.g., `IValidatable`) lets you control which behaviors apply to Task vs. ValueTask request pipelines without triggering **SMD002**.
+        ```csharp
+        // ValidationBehavior only applies to requests that implement IValidatable
+        public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+            where TRequest : notnull, IValidatable
+        { /* ... */ }
+
+        // These requests get validation
+        public class GetUserRequest : IRequest<Result<User>>, IAuditableRequest, IValidatable { }
+
+        // This ValueTask request bypasses ValidationBehavior (no IValidatable)
+        public class FastStatusCheckRequest : IRequest<bool> { }
         ```
     *   **Explicit Ordering:** Uses `[PipelineBehaviorOrder(N)]` to control the execution sequence. Behaviors without the attribute run last.
         ```csharp
@@ -149,7 +189,7 @@ This sample application demonstrates various technical capabilities of the **Swi
         }
         ```
 
-*   **Dependency Injection Setup:** Shows configuration using `SwitchMediator.Extensions.Microsoft.DependencyInjection`, including assembly scanning for automatic registration of handlers and behaviors.
+*   **Dependency Injection Setup:** Shows configuration using `SwitchMediator.Extensions.Microsoft.DependencyInjection`, including assembly scanning for automatic registration of handlers and behaviors. `IValueMediator`, `IValueSender`, and `IValuePublisher` are registered automatically.
 
     ```csharp
     // In Program.Main:
@@ -165,6 +205,9 @@ This sample application demonstrates various technical capabilities of the **Swi
         );
     });
 
+    // IValueSender and IValuePublisher are also available after AddMediator
+    var valueSender = serviceProvider.GetRequiredService<IValueSender>();
+    var valuePublisher = serviceProvider.GetRequiredService<IValuePublisher>();
     ```
 
 *   **Notification Handler Ordering:** Demonstrates explicit control over the execution order for handlers of a specific notification type.
@@ -185,14 +228,18 @@ This sample application demonstrates various technical capabilities of the **Swi
 
     ```csharp
     // In Program.RunSample:
-    private static async Task RunSample(ISender sender, IPublisher publisher) // Injected instances
+    private static async Task RunSample(ISender sender, IPublisher publisher, IValueSender valueSender, IValuePublisher valuePublisher)
     {
-        // Send a request-response message
-        var userRequest = new GetUserRequest(123);
-        var userResult = await sender.Send(userRequest);
+        // Send a request-response message (Task-based)
+        var userResult = await sender.Send(new GetUserRequest(123));
 
-        // Publish a notification message
-        var loginEvent = new UserLoggedInEvent(123);
-        await publisher.Publish(loginEvent);
+        // Send via ValueTask path (reduced allocation)
+        bool ok = await valueSender.Send(new FastStatusCheckRequest());
+
+        // Publish a notification message (Task-based)
+        await publisher.Publish(new UserLoggedInEvent(123));
+
+        // Publish via ValueTask path (zero dispatch allocation)
+        await valuePublisher.Publish(new ServerStartedEvent());
     }
     ```
