@@ -32,6 +32,7 @@ public class SwitchMediatorSourceGeneratorTests : CSharpSourceGeneratorTest<Swit
     [InlineData("ReferencesMediator")]
     [InlineData("ReferencesSender")]
     [InlineData("ReferencesPublisher")]
+    [InlineData("ValueTaskBasic")]
     public async Task GeneratesSwitchMediatorCorrectly(string testCase)
     {
         var inputCode = await File.ReadAllTextAsync(Path.Combine("TestCases", testCase, "Input.cs"));

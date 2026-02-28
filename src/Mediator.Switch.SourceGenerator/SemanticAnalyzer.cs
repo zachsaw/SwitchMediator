@@ -11,10 +11,14 @@ public class SemanticAnalyzer
     private readonly Compilation _compilation;
     private readonly INamedTypeSymbol _iRequestSymbol;
     private readonly INamedTypeSymbol _iRequestHandlerSymbol;
+    private readonly INamedTypeSymbol _iValueRequestHandlerSymbol;
     private readonly INamedTypeSymbol _iPipelineBehaviorSymbol;
+    private readonly INamedTypeSymbol _iValuePipelineBehaviorSymbol;
     private readonly INamedTypeSymbol _iNotificationPipelineBehaviorSymbol;
+    private readonly INamedTypeSymbol _iValueNotificationPipelineBehaviorSymbol;
     private readonly INamedTypeSymbol _iNotificationSymbol;
     private readonly INamedTypeSymbol _iNotificationHandlerSymbol;
+    private readonly INamedTypeSymbol _iValueNotificationHandlerSymbol;
     private readonly INamedTypeSymbol _orderAttributeSymbol;
     private readonly INamedTypeSymbol _switchMediatorAttributeSymbol;
 
@@ -28,12 +32,15 @@ public class SemanticAnalyzer
 
         _iRequestSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IRequest`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IRequest`1");
         _iRequestHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IRequestHandler`2") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IRequestHandler`2");
+        _iValueRequestHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueRequestHandler`2") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IValueRequestHandler`2");
         _iPipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IPipelineBehavior`2") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IPipelineBehavior`2");
-        // New Interface Lookup
+        _iValuePipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValuePipelineBehavior`2") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IValuePipelineBehavior`2");
         _iNotificationPipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotificationPipelineBehavior`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotificationPipelineBehavior`1");
+        _iValueNotificationPipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueNotificationPipelineBehavior`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IValueNotificationPipelineBehavior`1");
 
         _iNotificationSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotification") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotification");
         _iNotificationHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.INotificationHandler`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.INotificationHandler`1");
+        _iValueNotificationHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueNotificationHandler`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IValueNotificationHandler`1");
         _orderAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorOrderAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorOrderAttribute");
         _switchMediatorAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.SwitchMediatorAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.SwitchMediatorAttribute");
     }
@@ -41,11 +48,11 @@ public class SemanticAnalyzer
     public SemanticAnalysis Analyze(List<TypeDeclarationSyntax> types, CancellationToken cancellationToken)
     {
         var requests = new List<(INamedTypeSymbol Class, ITypeSymbol TResponse)>();
-        var handlers = new List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)>();
-        var behaviors = new List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)>();
-        var notificationBehaviors = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
+        var handlers = new List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)>();
+        var behaviors = new List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)>();
+        var notificationBehaviors = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)>();
         var notifications = new List<ITypeSymbol>();
-        var notificationHandlers = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification)>();
+        var notificationHandlers = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)>();
         INamedTypeSymbol? mediatorClass = null;
 
         // Analyze types discovered by the syntax receiver
@@ -116,11 +123,11 @@ public class SemanticAnalyzer
         INamedTypeSymbol typeSymbol,
         CancellationToken cancellationToken,
         List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> notificationBehaviors,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> notificationBehaviors,
         List<ITypeSymbol> notifications,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers)
     {
         if (cancellationToken.IsCancellationRequested) return;
 
@@ -150,11 +157,11 @@ public class SemanticAnalyzer
         IAssemblySymbol assemblySymbol,
         CancellationToken cancellationToken,
         List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> notificationBehaviors,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> notificationBehaviors,
         List<ITypeSymbol> notifications,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers)
     {
         VisitNamespace(assemblySymbol.GlobalNamespace);
         return;
@@ -208,37 +215,59 @@ public class SemanticAnalyzer
         }
     }
 
-    private void TryAddRequestHandler(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers)
+    private void TryAddRequestHandler(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers)
     {
-        var handlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
+        // Check both IRequestHandler (Task) and IValueRequestHandler (ValueTask)
+        var taskHandlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
             OriginalDefinitionMatches(i, _iRequestHandlerSymbol));
+        var valueHandlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
+            OriginalDefinitionMatches(i, _iValueRequestHandlerSymbol));
 
-        foreach (var handlerInterface in handlerInterfaces)
+        foreach (var handlerInterface in taskHandlerInterfaces)
         {
             if (handlerInterface.TypeArguments.Length != 2) continue;
-
             var tRequest = handlerInterface.TypeArguments[0];
             var tResponse = handlerInterface.TypeArguments[1];
-
             if (tRequest.Kind == SymbolKind.TypeParameter || tResponse.Kind == SymbolKind.TypeParameter) continue;
-
-            // --- DELETED: VerifyRequestMatchesHandler(typeSymbol, tRequest); ---
-            // The logic is now in Mediator.Switch.Analyzer
-
             if (!handlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TRequest, tRequest)))
             {
-                handlers.Add((typeSymbol, tRequest, tResponse));
+                handlers.Add((typeSymbol, tRequest, tResponse, false));
+            }
+        }
+
+        foreach (var handlerInterface in valueHandlerInterfaces)
+        {
+            if (handlerInterface.TypeArguments.Length != 2) continue;
+            var tRequest = handlerInterface.TypeArguments[0];
+            var tResponse = handlerInterface.TypeArguments[1];
+            if (tRequest.Kind == SymbolKind.TypeParameter || tResponse.Kind == SymbolKind.TypeParameter) continue;
+            if (!handlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TRequest, tRequest)))
+            {
+                handlers.Add((typeSymbol, tRequest, tResponse, true));
             }
         }
     }
 
-    private void TryAddPipelineBehavior(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors)
+    private void TryAddPipelineBehavior(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors)
     {
-        var behaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
+        // Check both IPipelineBehavior (Task) and IValuePipelineBehavior (ValueTask)
+        var taskBehaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
             OriginalDefinitionMatches(i, _iPipelineBehaviorSymbol));
+        var valueBehaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
+            OriginalDefinitionMatches(i, _iValuePipelineBehaviorSymbol));
 
-        if (behaviorInterface == null) return;
+        if (taskBehaviorInterface != null)
+            TryAddPipelineBehaviorFromInterface(typeSymbol, taskBehaviorInterface, behaviors, isValueTask: false);
+        if (valueBehaviorInterface != null)
+            TryAddPipelineBehaviorFromInterface(typeSymbol, valueBehaviorInterface, behaviors, isValueTask: true);
+    }
 
+    private void TryAddPipelineBehaviorFromInterface(
+        INamedTypeSymbol typeSymbol,
+        INamedTypeSymbol behaviorInterface,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors,
+        bool isValueTask)
+    {
         var classTypeParameters = typeSymbol.TypeParameters;
         var location = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
 
@@ -255,8 +284,9 @@ public class SemanticAnalyzer
 
         if (!SymbolEqualityComparer.Default.Equals(interfaceTRequest, classTRequest))
         {
+            var ifaceName = isValueTask ? "IValuePipelineBehavior" : "IPipelineBehavior";
             throw new SourceGenerationException(
-                $"The first type argument to IPipelineBehavior in '{typeSymbol.ToDisplayString()}' must be the behavior's first generic type parameter.", location);
+                $"The first type argument to {ifaceName} in '{typeSymbol.ToDisplayString()}' must be the behavior's first generic type parameter.", location);
         }
 
         INamedTypeSymbol? wrapperType = null;
@@ -282,19 +312,31 @@ public class SemanticAnalyzer
         }
 
         var typeParameters = typeSymbol.TypeParameters;
-        if (!behaviors.Any(b => SymbolEqualityComparer.Default.Equals(b.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(b.TRequest, interfaceTRequest) && SymbolEqualityComparer.Default.Equals(b.TResponse, interfaceTResponse)))
+        if (!behaviors.Any(b => SymbolEqualityComparer.Default.Equals(b.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(b.TRequest, interfaceTRequest) && SymbolEqualityComparer.Default.Equals(b.TResponse, interfaceTResponse) && b.IsValueTask == isValueTask))
         {
-            behaviors.Add((typeSymbol, interfaceTRequest, interfaceTResponse, typeParameters, wrapperType));
+            behaviors.Add((typeSymbol, interfaceTRequest, interfaceTResponse, typeParameters, wrapperType, isValueTask));
         }
     }
 
-    private void TryAddNotificationPipelineBehavior(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors)
+    private void TryAddNotificationPipelineBehavior(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> behaviors)
     {
-        var behaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
+        var taskBehaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
             OriginalDefinitionMatches(i, _iNotificationPipelineBehaviorSymbol));
+        var valueBehaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
+            OriginalDefinitionMatches(i, _iValueNotificationPipelineBehaviorSymbol));
 
-        if (behaviorInterface == null) return;
+        if (taskBehaviorInterface != null)
+            TryAddNotificationPipelineBehaviorFromInterface(typeSymbol, taskBehaviorInterface, behaviors, isValueTask: false);
+        if (valueBehaviorInterface != null)
+            TryAddNotificationPipelineBehaviorFromInterface(typeSymbol, valueBehaviorInterface, behaviors, isValueTask: true);
+    }
 
+    private void TryAddNotificationPipelineBehaviorFromInterface(
+        INamedTypeSymbol typeSymbol,
+        INamedTypeSymbol behaviorInterface,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> behaviors,
+        bool isValueTask)
+    {
         var classTypeParameters = typeSymbol.TypeParameters;
         var location = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
 
@@ -310,14 +352,15 @@ public class SemanticAnalyzer
 
         if (!SymbolEqualityComparer.Default.Equals(interfaceTNotification, classTNotification))
         {
+            var ifaceName = isValueTask ? "IValueNotificationPipelineBehavior" : "INotificationPipelineBehavior";
             throw new SourceGenerationException(
-                $"The type argument to INotificationPipelineBehavior in '{typeSymbol.ToDisplayString()}' must be the behavior's generic type parameter.",
+                $"The type argument to {ifaceName} in '{typeSymbol.ToDisplayString()}' must be the behavior's generic type parameter.",
                 location);
         }
 
-        if (!behaviors.Any(b => SymbolEqualityComparer.Default.Equals(b.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(b.TNotification, interfaceTNotification)))
+        if (!behaviors.Any(b => SymbolEqualityComparer.Default.Equals(b.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(b.TNotification, interfaceTNotification) && b.IsValueTask == isValueTask))
         {
-            behaviors.Add((typeSymbol, interfaceTNotification, typeSymbol.TypeParameters));
+            behaviors.Add((typeSymbol, interfaceTNotification, typeSymbol.TypeParameters, isValueTask));
         }
     }
 
@@ -335,37 +378,44 @@ public class SemanticAnalyzer
         }
     }
 
-    private void TryAddNotificationHandler(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers)
+    private void TryAddNotificationHandler(INamedTypeSymbol typeSymbol, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers)
     {
-        var notificationHandlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
+        // Check both INotificationHandler (Task) and IValueNotificationHandler (ValueTask)
+        var taskHandlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
             OriginalDefinitionMatches(i, _iNotificationHandlerSymbol));
+        var valueHandlerInterfaces = typeSymbol.AllInterfaces.Where(i =>
+            OriginalDefinitionMatches(i, _iValueNotificationHandlerSymbol));
 
-        foreach (var notificationHandlerInterface in notificationHandlerInterfaces)
+        foreach (var notificationHandlerInterface in taskHandlerInterfaces)
         {
-            if (notificationHandlerInterface == null) continue;
-
             var notification = notificationHandlerInterface.TypeArguments.FirstOrDefault();
-            if (notification != null)
+            if (notification != null && !notificationHandlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TNotification, notification)))
             {
-                if (!notificationHandlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TNotification, notification)))
-                {
-                    notificationHandlers.Add((typeSymbol, notification));
-                }
+                notificationHandlers.Add((typeSymbol, notification, false));
+            }
+        }
+
+        foreach (var notificationHandlerInterface in valueHandlerInterfaces)
+        {
+            var notification = notificationHandlerInterface.TypeArguments.FirstOrDefault();
+            if (notification != null && !notificationHandlers.Any(h => SymbolEqualityComparer.Default.Equals(h.Class, typeSymbol) && SymbolEqualityComparer.Default.Equals(h.TNotification, notification)))
+            {
+                notificationHandlers.Add((typeSymbol, notification, true));
             }
         }
     }
 
-    private List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)>
+    private List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)>
         ProcessRequestBehaviors(
             List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
-            List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors) =>
+            List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors) =>
         requests.Select(request =>
         {
             var applicableBehaviors = GetApplicableBehaviors(behaviors, request);
             return (Request: request, Behaviors: applicableBehaviors.OrderByDescending(b => GetOrder(b.Class)).ToList());
         }).ToList();
 
-    private IEnumerable<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> GetApplicableBehaviors(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType)> behaviors, (INamedTypeSymbol Class, ITypeSymbol TResponse) request)
+    private IEnumerable<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> GetApplicableBehaviors(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors, (INamedTypeSymbol Class, ITypeSymbol TResponse) request)
     {
         foreach (var behavior in behaviors)
         {
@@ -403,31 +453,27 @@ public class SemanticAnalyzer
                     behavior.Class,
                     request.Class,
                     actualBehaviorTResponse,
-                    behavior.TypeParameters
+                    behavior.TypeParameters,
+                    behavior.IsValueTask
                 );
             }
         }
     }
 
-    private List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)>
+    private List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)>
         ProcessNotificationBehaviors(
             List<ITypeSymbol> notifications,
-            List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers,
-            List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> behaviors)
+            List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
+            List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> behaviors)
     {
-        var results = new List<((ITypeSymbol Notification, ITypeSymbol ActualNotification), List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>)>();
-
-        // We need to determine the "Actual" notification type for every discovered notification,
-        // similar to how CodeGenerator does it, so we can match behaviors to the concrete type being switched on.
-        // However, CodeGenerator logic TryGetActualNotification is static. We duplicate logic slightly or rely on the fact
-        // that we iterate all notifications.
+        var results = new List<((ITypeSymbol Notification, ITypeSymbol ActualNotification), List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)>)>();
 
         foreach (var notification in notifications)
         {
             var actualNotification = TryGetActualNotification(_iNotificationSymbol, notificationHandlers, notification);
             if (actualNotification == null) continue;
 
-            var applicable = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
+            var applicable = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)>();
 
             foreach (var behavior in behaviors)
             {
@@ -446,7 +492,7 @@ public class SemanticAnalyzer
     // Duplicated helper from CodeGenerator to ensure consistency in analysis phase
     private static ITypeSymbol? TryGetActualNotification(
         ITypeSymbol iNotificationType,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
         ITypeSymbol notification)
     {
         var current = notification;

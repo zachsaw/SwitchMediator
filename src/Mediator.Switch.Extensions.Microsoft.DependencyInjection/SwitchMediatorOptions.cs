@@ -39,9 +39,10 @@ public class SwitchMediatorOptions
         
         foreach (var handlerType in handlerTypes)
         {
-            if (!typeof(INotificationHandler<TNotification>).IsAssignableFrom(handlerType))
+            if (!typeof(INotificationHandler<TNotification>).IsAssignableFrom(handlerType) &&
+                !typeof(IValueNotificationHandler<TNotification>).IsAssignableFrom(handlerType))
             {
-                throw new ArgumentException($"Type {handlerType.Name} does not implement INotificationHandler<{typeof(TNotification).Name}>");
+                throw new ArgumentException($"Type {handlerType.Name} does not implement INotificationHandler<{typeof(TNotification).Name}> or IValueNotificationHandler<{typeof(TNotification).Name}>");
             }
         }
 

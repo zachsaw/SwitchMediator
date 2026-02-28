@@ -22,6 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
+* [What's New in V4](#whats-new-in-v4)
 * [What's New in V3](#whats-new-in-v3)
 * [What's New in V2](#whats-new-in-v2)
 * [Why SwitchMediator?](#why-switchmediator)
@@ -31,6 +32,64 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [Installation](#installation)
 * [Usage Example](#usage-example)
 * [License](#license)
+
+ ---
+
+## What's New in V4
+
+### Hybrid `ValueTask` Support
+
+V4 introduces `IValueMediator`, `IValueSender`, and `IValuePublisher` — a parallel set of interfaces that dispatch via `ValueTask` instead of `Task`.
+
+The generated mediator class now implements **both** `IMediator` and `IValueMediator` simultaneously. You can inject whichever interface suits your performance needs.
+
+**New interfaces added:**
+
+| Interface | Purpose |
+| :--- | :--- |
+| `IValueSender` | `ValueTask<TResponse> Send(IRequest<TResponse>, CancellationToken)` |
+| `IValuePublisher` | `ValueTask Publish(INotification, CancellationToken)` |
+| `IValueMediator` | Combines `IValueSender` + `IValuePublisher` |
+| `IValueRequestHandler<TRequest, TResponse>` | ValueTask-returning handler |
+| `IValueNotificationHandler<TNotification>` | ValueTask-returning notification handler |
+| `IValuePipelineBehavior<TRequest, TResponse>` | ValueTask-returning pipeline behavior |
+| `IValueNotificationPipelineBehavior<TNotification>` | ValueTask-returning notification pipeline behavior |
+
+**Allocation characteristics:**
+
+| Path | Allocation |
+| :--- | :--- |
+| `IValuePublisher.Publish` + `IValueNotificationHandler` | **Zero** allocation in the dispatch layer |
+| `IPublisher.Publish` + `INotificationHandler` (existing) | Already zero allocation (unchanged) |
+| `IValueSender.Send` + `IValueRequestHandler` | **Reduced** allocation vs. Task path — eliminates the `Task<T>` heap object for synchronous handlers |
+| `ISender.Send` + `IRequestHandler` (existing) | ~96 B per call (unchanged) |
+
+> **Note:** `IValuePublisher.Publish` achieves zero allocation because the dispatch dictionary returns `ValueTask` (a struct) directly, without boxing. `IValueSender.Send` still has a small boxing overhead due to the generic dictionary constraint — but is measurably cheaper than the `Task<T>` path for synchronous handlers.
+
+### New Compile-Time Analyzer: **SMD002**
+
+A new `PipelineConsistencyAnalyzer` (diagnostic ID `SMD002`) reports a **build error** if you accidentally mix `IPipelineBehavior` (Task) behaviors with `IValueRequestHandler` (ValueTask) handlers, or vice versa.
+
+```csharp
+// ❌ SMD002 error: ValidationBehavior (IPipelineBehavior) applied to a ValueTask handler
+public class FastStatusCheckHandler : IValueRequestHandler<FastStatusCheckRequest, bool> { ... }
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull { ... }  // This would apply to FastStatusCheckRequest — compile error!
+
+// ✅ Fix: Use a marker interface to scope behaviors to the correct pipeline
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull, IValidatable { ... }  // Now only applies to IValidatable requests
+```
+
+### DI Registration
+
+`AddMediator<T>()` automatically registers `IValueMediator`, `IValueSender`, and `IValuePublisher` alongside the existing `IMediator`, `ISender`, and `IPublisher`. No extra configuration needed.
+
+```csharp
+// All six interfaces are available after a single AddMediator call
+var sender = sp.GetRequiredService<ISender>();          // Task-based
+var valueSender = sp.GetRequiredService<IValueSender>(); // ValueTask-based (zero extra setup)
+```
 
  ---
 
@@ -113,10 +172,15 @@ Most source-generated mediators force you to have an **Exact Type Match** betwee
 ## Features
 
 * Request/Response messages (`IRequest<TResponse>`, `IRequestHandler<TRequest, TResponse>`)
+* **ValueTask Request/Response** (`IValueRequestHandler<TRequest, TResponse>`, `IValueSender`) for reduced-allocation dispatch
 * Notification messages (`INotification`, `INotificationHandler<TNotification>`)
+* **ValueTask Notifications** (`IValueNotificationHandler<TNotification>`, `IValuePublisher`) for zero-allocation notification dispatch
+* **Hybrid `IValueMediator`**: generated class implements both `IMediator` and `IValueMediator` simultaneously
 * **Polymorphic Dispatch** (Inheritance support for Requests and Notifications).
 * Pipeline Behaviors (`IPipelineBehavior<TRequest, TResponse>`) for cross-cutting concerns.
+* **ValueTask Pipeline Behaviors** (`IValuePipelineBehavior<TRequest, TResponse>`)
 * Notification Pipeline Behaviors (`INotificationPipelineBehavior<TNotification>`) for per-handler middleware (Resilience, Retries, etc.).
+* **SMD002** compile-time enforcement of Task/ValueTask pipeline consistency
 * Native support for Result pattern (e.g. [FluentResults](https://github.com/altmann/FluentResults)).
 * Flexible Pipeline Behavior Ordering via `[PipelineBehaviorOrder(int order)]`.
 * Explicit Notification Handler Ordering via DI configuration.
@@ -164,13 +228,13 @@ Register your custom mediator class in your application's composition root (e.g.
  using Mediator.Switch;
  using Mediator.Switch.Extensions.Microsoft.DependencyInjection;
  using My.Application; // Namespace where you defined AppMediator
- 
+
  public static class Program
  {
      public static async Task Main()
      {
          var services = new ServiceCollection();
- 
+
          // --- SwitchMediator Registration ---
          // Register your custom partial class.
          // The extension method automatically finds the generated 'KnownTypes' on AppMediator.
@@ -184,31 +248,37 @@ Register your custom mediator class in your application's composition root (e.g.
                  typeof(UserLoggedInAnalytics)
              );
          });
- 
+
          // --- Build and Scope ---
          var serviceProvider = services.BuildServiceProvider();
          using var scope = serviceProvider.CreateScope();
- 
+
+         // Both Task-based and ValueTask-based interfaces are registered automatically
          var sender = scope.ServiceProvider.GetRequiredService<ISender>();
          var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
- 
-         await RunSampleLogic(sender, publisher);
+         var valueSender = scope.ServiceProvider.GetRequiredService<IValueSender>();     // New in V4
+         var valuePublisher = scope.ServiceProvider.GetRequiredService<IValuePublisher>(); // New in V4
+
+         await RunSampleLogic(sender, publisher, valueSender, valuePublisher);
      }
  }
  ```
 
 ### 3. Sending Requests & Publishing Notifications
 
-Inject `ISender` and `IPublisher` into your services (controllers, etc.) and use them to dispatch messages.
+Inject `ISender` and `IPublisher` (Task-based) or `IValueSender` and `IValuePublisher` (ValueTask-based) into your services and use them to dispatch messages.
 
  ```csharp
- public static async Task RunSampleLogic(ISender sender, IPublisher publisher)
+ public static async Task RunSampleLogic(ISender sender, IPublisher publisher,
+     IValueSender valueSender, IValuePublisher valuePublisher)
  {
-     // Send a Request
+     // Task-based (backward compatible)
      var response = await sender.Send(new GetUserRequest(123));
-     
-     // Publish a Notification
      await publisher.Publish(new UserLoggedInEvent(123));
+
+     // ValueTask-based (reduced-allocation path) — New in V4
+     bool ok = await valueSender.Send(new FastStatusCheckRequest());
+     await valuePublisher.Publish(new ServerStartedEvent());
  }
  ```
  
