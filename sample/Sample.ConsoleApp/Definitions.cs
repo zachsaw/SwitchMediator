@@ -23,6 +23,13 @@ public interface IVersionedResponse
     int Version { get; set; }
 }
 
+/// <summary>
+/// Marker interface for requests that have a FluentValidation validator registered.
+/// Constraining ValidationBehavior to this interface ensures it only applies to requests
+/// that actually need validation, and cleanly separates Task-based and ValueTask-based pipelines.
+/// </summary>
+public interface IValidatable { }
+
 // Marker for notifications that should not crash the entire publish loop on failure
 public interface ISilentFailureNotification : INotification;
 
@@ -33,14 +40,14 @@ public interface IRetryableNotification : INotification;
 // --- Requests ---
 
 [RequestHandler(typeof(GetUserRequestHandler))]
-public class GetUserRequest(int userId) : IRequest<Result<User>>, IAuditableRequest
+public class GetUserRequest(int userId) : IRequest<Result<User>>, IAuditableRequest, IValidatable
 {
     public int UserId { get; } = userId;
     public DateTime Timestamp { get; } = DateTime.Now;
 }
 
 [RequestHandler(typeof(CreateOrderRequestHandler))]
-public record CreateOrderRequest(string Product) : IRequest<int>, ITransactionalRequest
+public record CreateOrderRequest(string Product) : IRequest<int>, ITransactionalRequest, IValidatable
 {
     public string Product { get; } = Product;
     public Guid TransactionId { get; } = Guid.NewGuid();
@@ -61,6 +68,14 @@ public record Cat : Animal
 {
     public override string AnimalType => "Cat";
 }
+
+/// <summary>
+/// A fast synchronous request that uses IValueRequestHandler for reduced-allocation dispatch.
+/// Returns a value type (bool) so no Task/ValueTask wrapper is needed in the handler body.
+/// Intentionally does not implement IValidatable, so the ValidationBehavior pipeline is bypassed.
+/// </summary>
+[RequestHandler(typeof(FastStatusCheckHandler))]
+public class FastStatusCheckRequest : IRequest<bool>;
 
 
 // --- Notifications ---
@@ -83,6 +98,11 @@ public class UnstableServiceEvent(string jobId) : IRetryableNotification
 {
     public string JobId { get; } = jobId;
 }
+
+/// <summary>
+/// A simple event dispatched via IValuePublisher for zero-allocation publish.
+/// </summary>
+public class ServerStartedEvent : INotification;
 
 
 // --- Response Models ---
@@ -124,6 +144,16 @@ public class AnimalRequestHandler : IRequestHandler<Animal, Unit>
         Console.WriteLine(request.AnimalType);
         return Unit.Value;
     }
+}
+
+/// <summary>
+/// ValueTask-based handler: completes synchronously with reduced allocation overhead.
+/// Ideal for fast, non-I/O operations. Use IValueSender to dispatch.
+/// </summary>
+public class FastStatusCheckHandler : IValueRequestHandler<FastStatusCheckRequest, bool>
+{
+    public ValueTask<bool> Handle(FastStatusCheckRequest request, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(true);
 }
 
 
@@ -183,6 +213,18 @@ public class UnstableServiceHandler : INotificationHandler<UnstableServiceEvent>
     }
 }
 
+/// <summary>
+/// ValueTask-based notification handler: IValuePublisher.Publish dispatches this with zero heap allocation.
+/// </summary>
+public class ServerStartedLogger : IValueNotificationHandler<ServerStartedEvent>
+{
+    public ValueTask Handle(ServerStartedEvent notification, CancellationToken cancellationToken = default)
+    {
+        Console.WriteLine("Server started notification received (ValueTask handler - zero alloc dispatch).");
+        return ValueTask.CompletedTask;
+    }
+}
+
 
 // --- Validators ---
 
@@ -222,7 +264,7 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 [PipelineBehaviorOrder(2)]
 public class ValidationBehavior<TRequest, TResponse>(IValidator<TRequest>? validator = null)
     : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+    where TRequest : notnull, IValidatable
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
     {

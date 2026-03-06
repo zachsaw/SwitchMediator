@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 using System.Collections.Frozen;
 #endif
 
-namespace Tests.Basic;
+namespace Tests.ValueTaskBasic;
 
 #pragma warning disable CS1998
 
@@ -29,7 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.Basic.PingHandler? _tests_Basic_PingHandler;
+    private global::Tests.ValueTaskBasic.PingHandler? _tests_ValueTaskBasic_PingHandler;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -63,10 +63,10 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
     {
         public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, object> Cases = new (global::System.Type, object)[]
         {
-            ( // case Tests.Basic.Ping:
-                typeof(global::Tests.Basic.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<string>>) ((instance, request, cancellationToken) =>
-                    instance.Handle_Tests_Basic_Ping(
-                        (global::Tests.Basic.Ping) request, cancellationToken))
+            ( // case Tests.ValueTaskBasic.Ping:
+                typeof(global::Tests.ValueTaskBasic.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<string>>) ((instance, request, cancellationToken) =>
+                    instance.Handle_Tests_ValueTaskBasic_Ping(
+                        (global::Tests.ValueTaskBasic.Ping) request, cancellationToken).AsTask())
             )
         }
 #if NET8_0_OR_GREATER
@@ -91,11 +91,10 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
     {
         public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, object> Cases = new (global::System.Type, object)[]
         {
-            ( // case Tests.Basic.Ping:
-                typeof(global::Tests.Basic.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>>) ((instance, request, cancellationToken) =>
-                    new global::System.Threading.Tasks.ValueTask<string>(
-                        instance.Handle_Tests_Basic_Ping(
-                            (global::Tests.Basic.Ping) request, cancellationToken)))
+            ( // case Tests.ValueTaskBasic.Ping:
+                typeof(global::Tests.ValueTaskBasic.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>>) ((instance, request, cancellationToken) =>
+                    instance.Handle_Tests_ValueTaskBasic_Ping(
+                        (global::Tests.ValueTaskBasic.Ping) request, cancellationToken))
             )
         }
 #if NET8_0_OR_GREATER
@@ -164,15 +163,15 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             (t => t.Item1, t => t.Item2);
     }
 
-    private global::System.Threading.Tasks.Task<string> Handle_Tests_Basic_Ping(
-        global::Tests.Basic.Ping request,
+    private global::System.Threading.Tasks.ValueTask<string> Handle_Tests_ValueTaskBasic_Ping(
+        global::Tests.ValueTaskBasic.Ping request,
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Basic_PingHandler = Get(ref _tests_Basic_PingHandler);
+        var tests_ValueTaskBasic_PingHandler = Get(ref _tests_ValueTaskBasic_PingHandler);
 
         return
-            /* Request Handler */ tests_Basic_PingHandler.Handle(request, cancellationToken);
+            /* Request Handler */ tests_ValueTaskBasic_PingHandler.Handle(request, cancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -189,7 +188,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
     {
         public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
             new global::System.Type[] {
-                typeof(global::Tests.Basic.PingHandler)
+                typeof(global::Tests.ValueTaskBasic.PingHandler)
             }.AsReadOnly();
 
         public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =

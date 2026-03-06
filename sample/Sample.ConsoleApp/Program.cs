@@ -40,10 +40,14 @@ public static class Program
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
 
-        await RunSample(sender, publisher);
+        // IValueSender and IValuePublisher are also registered automatically
+        var valueSender = scope.ServiceProvider.GetRequiredService<IValueSender>();
+        var valuePublisher = scope.ServiceProvider.GetRequiredService<IValuePublisher>();
+
+        await RunSample(sender, publisher, valueSender, valuePublisher);
     }
 
-    private static async Task RunSample(ISender sender, IPublisher publisher)
+    private static async Task RunSample(ISender sender, IPublisher publisher, IValueSender valueSender, IValuePublisher valuePublisher)
     {
         Console.WriteLine("--- Sending GetUserRequest ---");
         var userRequest = new GetUserRequest(123);
@@ -64,6 +68,15 @@ public static class Program
         var dogRequest = new Dog();
         await sender.Send(dogRequest);
         Console.WriteLine("--> Done\n");
+
+        // --- ValueTask Demo ---
+        Console.WriteLine("--- Sending FastStatusCheckRequest via IValueSender (reduced-allocation path) ---");
+        var statusResult = await valueSender.Send(new FastStatusCheckRequest());
+        Console.WriteLine($"--> Status: {(statusResult ? "OK" : "FAIL")}\n");
+
+        Console.WriteLine("--- Publishing ServerStartedEvent via IValuePublisher (zero-allocation dispatch) ---");
+        await valuePublisher.Publish(new ServerStartedEvent());
+        Console.WriteLine("--- ServerStartedEvent Published ---\n");
 
         Console.WriteLine("--- Publishing UserLoggedInEvent ---");
         var loginEvent = new DerivedUserLoggedInEvent(123);

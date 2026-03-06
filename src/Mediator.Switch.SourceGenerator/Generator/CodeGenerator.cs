@@ -71,22 +71,48 @@ public static class CodeGenerator
                     $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{actualNotif.GetVariableName()};");
             });
 
-        // Use global:: for system types to avoid collisions
-        var notificationHandlerFields = usedNotifications.Select(n =>
-            $"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__Handlers;");
+        // Generate notification handler fields (Task and ValueTask variants)
+        var notificationHandlerFields = usedNotifications.SelectMany(n =>
+        {
+            var fields = new List<string>();
+            var handlersForN = notificationHandlers
+                .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
+                .ToList();
+            if (handlersForN.Any(h => !h.IsValueTask))
+                fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__Handlers;");
+            if (handlersForN.Any(h => h.IsValueTask))
+                fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.IValueNotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__ValueHandlers;");
+            return fields;
+        });
 
-        // Generate Send method switch cases
-        var sendCases = actualSendCases
-            .Select(c => GenerateSendCase(c.ActualRequest, c.Request));
+        // Generate Task Send method switch cases
+        var taskSendCases = actualSendCases.Select(c =>
+        {
+            var handlerIsValueTask = handlers.FirstOrDefault(h => h.TRequest.Equals(c.ActualRequest, SymbolEqualityComparer.Default)).IsValueTask;
+            return GenerateTaskSendCase(c.ActualRequest, c.Request, handlerIsValueTask, className);
+        });
+
+        // Generate ValueTask Send method switch cases
+        var valueSendCases = actualSendCases.Select(c =>
+        {
+            var handlerIsValueTask = handlers.FirstOrDefault(h => h.TRequest.Equals(c.ActualRequest, SymbolEqualityComparer.Default)).IsValueTask;
+            return GenerateValueSendCase(c.ActualRequest, c.Request, handlerIsValueTask, className);
+        });
 
         // Generate behavior chain methods for requests
         var behaviorMethods = actualRequestBehaviors
             .Select(r => TryGenerateBehaviorMethod(handlers, r))
             .Where(m => m != null);
 
-        // Generate Publish method switch cases
-        var publishCases = actualPublishCases
-            .Select(n => GeneratePublishCase(n.ActualNotification, n.Notification, notificationBehaviors));
+        // Generate Task Publish method switch cases (Task-based notification handlers only)
+        var taskPublishCases = actualPublishCases
+            .Select(n => GenerateTaskPublishCase(n.ActualNotification, n.Notification, notificationHandlers, notificationBehaviors))
+            .Where(c => c != null);
+
+        // Generate ValueTask Publish method switch cases (ValueTask-based notification handlers only)
+        var valuePublishCases = actualPublishCases
+            .Select(n => GenerateValuePublishCase(n.ActualNotification, n.Notification, notificationHandlers, notificationBehaviors))
+            .Where(c => c != null);
 
         // Generate known types
         var requestHandlerTypes = handlers
@@ -145,7 +171,7 @@ public static class CodeGenerator
                
                #pragma warning disable CS1998
                
-               {{accessibility}} partial class {{className}} : global::Mediator.Switch.IMediator
+               {{accessibility}} partial class {{className}} : global::Mediator.Switch.IMediator, global::Mediator.Switch.IValueMediator
                {
                    #region Fields
                
@@ -171,19 +197,43 @@ public static class CodeGenerator
                
                    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
                    {
-                       if (SendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
+                       if (TaskSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
                        {
-                           return (global::System.Threading.Tasks.Task<TResponse>)handle(this, request, cancellationToken);
+                           return global::System.Runtime.CompilerServices.Unsafe.As<global::System.Func<{{className}}, global::Mediator.Switch.IRequest<TResponse>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<TResponse>>>(handle)(this, request, cancellationToken);
                        }
                        
                        throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
                    }
                
-                   private static class SendSwitchCase
+                   private static class TaskSendSwitchCase
                    {
-                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<{{className}}, object, global::System.Threading.CancellationToken, object>> Cases = new (global::System.Type, global::System.Func<{{className}}, object, global::System.Threading.CancellationToken, object>)[]
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, object> Cases = new (global::System.Type, object)[]
                        {
-               {{string.Join(",\n", sendCases)}}
+               {{string.Join(",\n", taskSendCases)}}
+                       }
+               #if NET8_0_OR_GREATER
+                       .ToFrozenDictionary
+               #else
+                       .ToDictionary
+               #endif
+                           (t => t.Item1, t => t.Item2);
+                   }
+               
+                   global::System.Threading.Tasks.ValueTask<TResponse> global::Mediator.Switch.IValueSender.Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken)
+                   {
+                       if (ValueSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
+                       {
+                           return global::System.Runtime.CompilerServices.Unsafe.As<global::System.Func<{{className}}, global::Mediator.Switch.IRequest<TResponse>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<TResponse>>>(handle)(this, request, cancellationToken);
+                       }
+                       
+                       throw new global::System.ArgumentException($"No handler for {request.GetType().Name}");
+                   }
+               
+                   private static class ValueSendSwitchCase
+                   {
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, object> Cases = new (global::System.Type, object)[]
+                       {
+               {{string.Join(",\n", valueSendCases)}}
                        }
                #if NET8_0_OR_GREATER
                        .ToFrozenDictionary
@@ -195,19 +245,53 @@ public static class CodeGenerator
                
                    public global::System.Threading.Tasks.Task Publish(global::Mediator.Switch.INotification notification, global::System.Threading.CancellationToken cancellationToken = default)
                    {
-                       if (PublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
+                       if (TaskPublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
                        {
                            return handle(this, notification, cancellationToken);
+                       }
+                       
+                       if (ValuePublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var valueHandle))
+                       {
+                           return valueHandle(this, notification, cancellationToken).AsTask();
                        }
                        
                        return global::System.Threading.Tasks.Task.CompletedTask;
                    }
                
-                   private static class PublishSwitchCase
+                   private static class TaskPublishSwitchCase
                    {
                        public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<{{className}}, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>> Cases = new (global::System.Type, global::System.Func<{{className}}, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task>)[]
                        {
-               {{string.Join(",\n", publishCases)}}
+               {{string.Join(",\n", taskPublishCases)}}
+                       }
+               #if NET8_0_OR_GREATER
+                       .ToFrozenDictionary
+               #else
+                       .ToDictionary
+               #endif
+                           (t => t.Item1, t => t.Item2);
+                   }
+               
+                   global::System.Threading.Tasks.ValueTask global::Mediator.Switch.IValuePublisher.Publish(global::Mediator.Switch.INotification notification, global::System.Threading.CancellationToken cancellationToken)
+                   {
+                       if (ValuePublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var handle))
+                       {
+                           return handle(this, notification, cancellationToken);
+                       }
+                       
+                       if (TaskPublishSwitchCase.Cases.TryGetValue(notification.GetType(), out var taskHandle))
+                       {
+                           return new global::System.Threading.Tasks.ValueTask(taskHandle(this, notification, cancellationToken));
+                       }
+                       
+                       return global::System.Threading.Tasks.ValueTask.CompletedTask;
+                   }
+               
+                   private static class ValuePublishSwitchCase
+                   {
+                       public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, global::System.Func<{{className}}, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask>> Cases = new (global::System.Type, global::System.Func<{{className}}, global::Mediator.Switch.INotification, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask>)[]
+                       {
+               {{string.Join(",\n", valuePublishCases)}}
                        }
                #if NET8_0_OR_GREATER
                        .ToFrozenDictionary
@@ -252,7 +336,7 @@ public static class CodeGenerator
 
     private static ITypeSymbol? TryGetActualRequest(
         ITypeSymbol iRequestType,
-        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
         (INamedTypeSymbol Class, ITypeSymbol TResponse) request)
     {
         var current = request.Class;
@@ -272,20 +356,56 @@ public static class CodeGenerator
         return null;
     }
 
-    private static string GenerateSendCase(
+    private static string GenerateTaskSendCase(
         ITypeSymbol actualHandler,
-        (INamedTypeSymbol Class, ITypeSymbol TResponse) request) =>
-        $$"""
+        (INamedTypeSymbol Class, ITypeSymbol TResponse) request,
+        bool handlerIsValueTask,
+        string className) =>
+        handlerIsValueTask
+            // ValueTask handler → wrap with .AsTask() for Task send path
+            ? $$"""
                       ( // case {{request.Class}}:
-                          typeof({{request.Class.ToDisplayString(_fqn)}}), (instance, request, cancellationToken) =>
+                          typeof({{request.Class.ToDisplayString(_fqn)}}), (global::System.Func<{{className}}, global::Mediator.Switch.IRequest<{{request.TResponse.ToDisplayString(_fqn)}}>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<{{request.TResponse.ToDisplayString(_fqn)}}>>) ((instance, request, cancellationToken) =>
                               instance.Handle_{{actualHandler.GetVariableName(false)}}(
-                                  ({{request.Class.ToDisplayString(_fqn)}}) request, cancellationToken)
+                                  ({{request.Class.ToDisplayString(_fqn)}}) request, cancellationToken).AsTask())
+                      )
+          """
+            // Task handler → return directly
+            : $$"""
+                      ( // case {{request.Class}}:
+                          typeof({{request.Class.ToDisplayString(_fqn)}}), (global::System.Func<{{className}}, global::Mediator.Switch.IRequest<{{request.TResponse.ToDisplayString(_fqn)}}>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<{{request.TResponse.ToDisplayString(_fqn)}}>>) ((instance, request, cancellationToken) =>
+                              instance.Handle_{{actualHandler.GetVariableName(false)}}(
+                                  ({{request.Class.ToDisplayString(_fqn)}}) request, cancellationToken))
+                      )
+          """;
+
+    private static string GenerateValueSendCase(
+        ITypeSymbol actualHandler,
+        (INamedTypeSymbol Class, ITypeSymbol TResponse) request,
+        bool handlerIsValueTask,
+        string className) =>
+        handlerIsValueTask
+            // ValueTask handler → return directly (zero allocation)
+            ? $$"""
+                      ( // case {{request.Class}}:
+                          typeof({{request.Class.ToDisplayString(_fqn)}}), (global::System.Func<{{className}}, global::Mediator.Switch.IRequest<{{request.TResponse.ToDisplayString(_fqn)}}>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<{{request.TResponse.ToDisplayString(_fqn)}}>>) ((instance, request, cancellationToken) =>
+                              instance.Handle_{{actualHandler.GetVariableName(false)}}(
+                                  ({{request.Class.ToDisplayString(_fqn)}}) request, cancellationToken))
+                      )
+          """
+            // Task handler → wrap in ValueTask struct
+            : $$"""
+                      ( // case {{request.Class}}:
+                          typeof({{request.Class.ToDisplayString(_fqn)}}), (global::System.Func<{{className}}, global::Mediator.Switch.IRequest<{{request.TResponse.ToDisplayString(_fqn)}}>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<{{request.TResponse.ToDisplayString(_fqn)}}>>) ((instance, request, cancellationToken) =>
+                              new global::System.Threading.Tasks.ValueTask<{{request.TResponse.ToDisplayString(_fqn)}}>(
+                                  instance.Handle_{{actualHandler.GetVariableName(false)}}(
+                                      ({{request.Class.ToDisplayString(_fqn)}}) request, cancellationToken)))
                       )
           """;
 
     private static ITypeSymbol? TryGetActualNotification(
         ITypeSymbol iNotificationType,
-        List<(INamedTypeSymbol Class, ITypeSymbol TNotification)> notificationHandlers,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
         ITypeSymbol notification)
     {
         var current = notification;
@@ -305,24 +425,35 @@ public static class CodeGenerator
         return null;
     }
 
-    private static string GeneratePublishCase(
+    private static string? GenerateTaskPublishCase(
         ITypeSymbol actualNotification,
         ITypeSymbol notification,
-        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors)> notificationBehaviors)
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
+        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> notificationBehaviors)
     {
+        // Only generate Task publish case for Task-based notification handlers
+        var handlersForNotification = notificationHandlers
+            .Where(h => h.TNotification.Equals(actualNotification, SymbolEqualityComparer.Default))
+            .ToList();
+        if (handlersForNotification.Any(h => h.IsValueTask) && !handlersForNotification.Any(h => !h.IsValueTask))
+            return null; // All handlers are ValueTask, skip Task publish case
+
         var behaviors = notificationBehaviors
             .FirstOrDefault(nb => SymbolEqualityComparer.Default.Equals(nb.NotificationInfo.ActualNotification, actualNotification))
-            .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters)>();
+            .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)>();
+
+        // Use only Task-based behaviors
+        var taskBehaviors = behaviors.Where(b => !b.IsValueTask).ToList();
 
         var notificationName = actualNotification.GetVariableName();
         var notificationType = actualNotification.ToDisplayString(_fqn);
 
-        var behaviorResolutions = behaviors.Select(b =>
+        var behaviorResolutions = taskBehaviors.Select(b =>
             $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
 
         var typedVar = "typedNotification";
         var coreCall = $"handler.Handle({typedVar}, cancellationToken)";
-        var chain = BehaviorChainBuilder.BuildNotification(behaviors, notificationName, typedVar, coreCall);
+        var chain = BehaviorChainBuilder.BuildNotification(taskBehaviors, notificationName, typedVar, coreCall);
 
         return $$"""
                       ( // case {{notification}}:
@@ -342,8 +473,56 @@ public static class CodeGenerator
           """;
     }
 
-    private static string? TryGenerateBehaviorMethod(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse)> handlers,
-        ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters)> Behaviors) r)
+    private static string? GenerateValuePublishCase(
+        ITypeSymbol actualNotification,
+        ITypeSymbol notification,
+        List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
+        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> notificationBehaviors)
+    {
+        // Only generate ValueTask publish case for ValueTask-based notification handlers
+        var handlersForNotification = notificationHandlers
+            .Where(h => h.TNotification.Equals(actualNotification, SymbolEqualityComparer.Default))
+            .ToList();
+        if (!handlersForNotification.Any(h => h.IsValueTask))
+            return null; // No ValueTask handlers, skip ValueTask publish case
+
+        var behaviors = notificationBehaviors
+            .FirstOrDefault(nb => SymbolEqualityComparer.Default.Equals(nb.NotificationInfo.ActualNotification, actualNotification))
+            .Behaviors ?? new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)>();
+
+        // Use only ValueTask-based behaviors
+        var valueBehaviors = behaviors.Where(b => b.IsValueTask).ToList();
+
+        var notificationName = actualNotification.GetVariableName();
+        var notificationType = actualNotification.ToDisplayString(_fqn);
+
+        var behaviorResolutions = valueBehaviors.Select(b =>
+            $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
+
+        var typedVar = "typedNotification";
+        var coreCall = $"handler.Handle({typedVar}, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildNotification(valueBehaviors, notificationName, typedVar, coreCall);
+
+        return $$"""
+                      ( // case {{notification}}:
+                          typeof({{notification.ToDisplayString(_fqn)}}), async (instance, notification, cancellationToken) =>
+                          {
+                              var handlers = instance.Get(ref instance._{{actualNotification.GetVariableName()}}__ValueHandlers);
+                              {{string.Join("\n                    ", behaviorResolutions)}}
+                              var {{typedVar}} = ({{notificationType}}) notification;
+                              
+                              foreach (var handler in handlers)
+                              {
+                                  await
+                                      {{chain}};
+                              }
+                          }
+                      )
+          """;
+    }
+
+    private static string? TryGenerateBehaviorMethod(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
+        ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors) r)
     {
         var (request, applicableBehaviors) = r;
         var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(request.Class, SymbolEqualityComparer.Default));
@@ -355,8 +534,12 @@ public static class CodeGenerator
         var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
         var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall);
 
+        var returnType = handler.IsValueTask
+            ? $"global::System.Threading.Tasks.ValueTask<{request.TResponse.ToDisplayString(_fqn)}>"
+            : $"global::System.Threading.Tasks.Task<{request.TResponse.ToDisplayString(_fqn)}>";
+
         return $$"""
-                 private global::System.Threading.Tasks.Task<{{request.TResponse.ToDisplayString(_fqn)}}> Handle_{{request.Class.GetVariableName(false)}}(
+                 private {{returnType}} Handle_{{request.Class.GetVariableName(false)}}(
                          {{request.Class.ToDisplayString(_fqn)}} request,
                          global::System.Threading.CancellationToken cancellationToken)
                      {

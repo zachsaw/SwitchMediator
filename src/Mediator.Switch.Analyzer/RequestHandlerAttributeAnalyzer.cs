@@ -12,8 +12,8 @@ public class RequestHandlerAttributeAnalyzer : DiagnosticAnalyzer
     private const string Category = "Design";
 
     private static readonly LocalizableString _title = "Invalid RequestHandlerAttribute";
-    private static readonly LocalizableString _messageFormat = "The handler '{0}' specified in RequestHandlerAttribute does not implement IRequestHandler<{1}, ...>";
-    private static readonly LocalizableString _description = "The type specified in RequestHandlerAttribute must implement IRequestHandler<TRequest, TResponse> where TRequest is the class the attribute is applied to.";
+    private static readonly LocalizableString _messageFormat = "The handler '{0}' specified in RequestHandlerAttribute does not implement IRequestHandler<{1}, ...> or IValueRequestHandler<{1}, ...>";
+    private static readonly LocalizableString _description = "The type specified in RequestHandlerAttribute must implement IRequestHandler<TRequest, TResponse> or IValueRequestHandler<TRequest, TResponse> where TRequest is the class the attribute is applied to.";
 
     private static readonly DiagnosticDescriptor _rule = new(
         DiagnosticId,
@@ -41,8 +41,9 @@ public class RequestHandlerAttributeAnalyzer : DiagnosticAnalyzer
         // Resolve required types
         var requestHandlerAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.RequestHandlerAttribute");
         var iRequestHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IRequestHandler`2");
+        var iValueRequestHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueRequestHandler`2");
 
-        if (requestHandlerAttributeSymbol == null || iRequestHandlerSymbol == null) return;
+        if (requestHandlerAttributeSymbol == null || (iRequestHandlerSymbol == null && iValueRequestHandlerSymbol == null)) return;
 
         foreach (var attribute in requestType.GetAttributes())
         {
@@ -52,9 +53,10 @@ public class RequestHandlerAttributeAnalyzer : DiagnosticAnalyzer
                     attribute.ConstructorArguments[0].Value is INamedTypeSymbol handlerType)
                 {
                     var implementsInterface = handlerType.AllInterfaces.Any(i =>
-                        SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iRequestHandlerSymbol) &&
                         i.TypeArguments.Length == 2 &&
-                        SymbolEqualityComparer.Default.Equals(i.TypeArguments[0], requestType));
+                        SymbolEqualityComparer.Default.Equals(i.TypeArguments[0], requestType) &&
+                        (SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iRequestHandlerSymbol) ||
+                         SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValueRequestHandlerSymbol)));
 
                     if (!implementsInterface)
                     {
