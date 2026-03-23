@@ -24,6 +24,9 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 * [What's New in V3.1](#whats-new-in-v31)
 * [What's New in V3](#whats-new-in-v3)
+* [What's New in V3.2](#whats-new-in-v32)
+* [What's New in V3.1](#whats-new-in-v31)
+* [What's New in V3](#whats-new-in-v3)
 * [What's New in V2](#whats-new-in-v2)
 * [Why SwitchMediator?](#why-switchmediator)
 * [🌟 Feature Spotlight: True Polymorphic Dispatch](#-feature-spotlight-true-polymorphic-dispatch)
@@ -32,6 +35,80 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [Installation](#installation)
 * [Usage Example](#usage-example)
 * [License](#license)
+
+ ---
+
+## What's New in V3.2
+
+### Per-Handler Typed Pipeline Injection
+
+V3.2 adds first-class support for directly injecting a **fully-pipelined `IRequestHandler<TRequest,TResponse>`** (or `IValueRequestHandler<TRequest,TResponse>`) from DI, without going through `ISender` or `IValueSender`. This is useful when you need to call a specific handler inline — for example inside another handler or service — while still getting all pipeline behaviors applied.
+
+#### Opting In
+
+Pass `YourMediator.PipelinedHandlerTypes` to `SwitchMediatorOptions.PipelinedHandlerTypes` during DI setup:
+
+```csharp
+services.AddMediator<AppMediator>(op =>
+{
+    op.KnownTypes = AppMediator.KnownTypes;
+    op.ServiceLifetime = ServiceLifetime.Scoped;
+    // Opt in: expose IRequestHandler<T,R> / IValueRequestHandler<T,R> from DI
+    op.PipelinedHandlerTypes = AppMediator.PipelinedHandlerTypes;
+});
+```
+
+Once registered, you can inject handlers directly:
+
+```csharp
+public class MyService(IRequestHandler<GetUserRequest, User> handler)
+{
+    public Task<User> GetUser(int id) => handler.Handle(new GetUserRequest(id), default);
+}
+```
+
+Or the ValueTask variant:
+
+```csharp
+public class MyService(IValueRequestHandler<GetUserRequest, User> handler)
+{
+    public ValueTask<User> GetUser(int id) => handler.Handle(new GetUserRequest(id), default);
+}
+```
+
+Both `IRequestHandler<TRequest,TResponse>` and `IValueRequestHandler<TRequest,TResponse>` resolve to the same generated wrapper object within a single DI scope.
+
+#### How It Works
+
+The source generator emits a **sealed inner class** `PipelinedHandler_<RequestName>` inside your mediator partial class. The wrapper holds a reference to the mediator and delegates directly to the private `Handle_XXX` method — the same method called by `ISender.Send`. This guarantees the full behavior chain is applied.
+
+```csharp
+// Generated (simplified):
+public sealed class PipelinedHandler_GetUserRequest :
+        IRequestHandler<GetUserRequest, User>,
+        IValueRequestHandler<GetUserRequest, User>
+{
+    private readonly AppMediator _mediator;
+    public PipelinedHandler_GetUserRequest(AppMediator mediator) => _mediator = mediator;
+
+    Task<User> IRequestHandler<GetUserRequest, User>.Handle(GetUserRequest req, CancellationToken ct)
+        => _mediator.Handle_GetUserRequest(req, ct); // runs full pipeline
+
+    ValueTask<User> IValueRequestHandler<GetUserRequest, User>.Handle(GetUserRequest req, CancellationToken ct)
+        => new(_mediator.Handle_GetUserRequest(req, ct));
+}
+```
+
+#### Known Constraints and Incompatibilities
+
+| Constraint | Details |
+| :--- | :--- |
+| **Opt-in only** | The feature is disabled by default. You must set `op.PipelinedHandlerTypes = YourMediator.PipelinedHandlerTypes` to enable it. |
+| **Task ↔ ValueTask adaptation** | `IRequestHandler<T,R>` always returns `Task<TResponse>`. For ValueTask-based handlers the result is wrapped via `.AsTask()`. Similarly, `IValueRequestHandler<T,R>` always returns `ValueTask<TResponse>`, wrapping Task-based results in `new ValueTask<T>(...)`. |
+| **Pipeline type must match the handler** | If you have `IValueRequestHandler` handlers you must use `IValuePipelineBehavior` behaviors (not `IPipelineBehavior`). The SMD002 analyzer enforces this at compile time. This constraint is independent of whether you enable pipelined injection. |
+| **No mixed pipelines** | You cannot have both `IPipelineBehavior` and `IValuePipelineBehavior` behaviors applicable to the same request type. This is an existing restriction enforced by SMD002. |
+| **Constructor injects concrete mediator** | The generated wrapper takes the concrete mediator type (e.g., `AppMediator`) as its constructor argument. The DI registration casts the resolved `IMediator` to `AppMediator` using `Activator.CreateInstance`. This is safe as long as the concrete type is correctly registered. |
+| **SMD002 analyzer update** | The `PipelineConsistencyAnalyzer` (SMD002) has been updated to skip types from auto-generated files (`.g.cs`). This prevents false-positive errors that previously fired when the generated wrapper classes (which implement both `IRequestHandler` and `IValueRequestHandler`) were analyzed alongside user-defined Task-based behaviors. |
 
  ---
 
