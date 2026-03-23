@@ -51,6 +51,11 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
+    public static global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes
+    {
+        get { return SwitchMediatorKnownTypes.PipelinedHandlerTypes; }
+    }
+
     public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (TaskSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
@@ -207,5 +212,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
                 typeof(global::Tests.NotificationPipeline.ExceptionHandlingBehavior<global::Tests.NotificationPipeline.Alert>),
                 typeof(global::Tests.NotificationPipeline.LoggingNotificationBehavior<global::Tests.NotificationPipeline.Alert>)
            }.AsReadOnly();
+
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes =
+           new (global::System.Type, global::System.Type, global::System.Type)[] {
+
+           }.AsReadOnly();
     }
+
+    #region Pipelined Handler Wrappers
+
+
+
+    #endregion
 }

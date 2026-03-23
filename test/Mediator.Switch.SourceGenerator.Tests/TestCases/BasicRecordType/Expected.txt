@@ -49,6 +49,11 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
+    public static global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes
+    {
+        get { return SwitchMediatorKnownTypes.PipelinedHandlerTypes; }
+    }
+
     public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (TaskSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
@@ -201,5 +206,31 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
            new global::System.Type[] {
 
            }.AsReadOnly();
+
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes =
+           new (global::System.Type, global::System.Type, global::System.Type)[] {
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.BasicRecordType.Ping, string>), typeof(TestMediator.PipelinedHandler_Tests_BasicRecordType_Ping), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicRecordType.Ping, string>))
+           }.AsReadOnly();
     }
+
+    #region Pipelined Handler Wrappers
+
+    public sealed class PipelinedHandler_Tests_BasicRecordType_Ping :
+        global::Mediator.Switch.IRequestHandler<global::Tests.BasicRecordType.Ping, string>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicRecordType.Ping, string>
+    {
+        private readonly TestMediator _mediator;
+
+        public PipelinedHandler_Tests_BasicRecordType_Ping(TestMediator mediator) => _mediator = mediator;
+
+        global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.BasicRecordType.Ping, string>.Handle(
+            global::Tests.BasicRecordType.Ping request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_BasicRecordType_Ping(request, cancellationToken);
+
+        global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicRecordType.Ping, string>.Handle(
+            global::Tests.BasicRecordType.Ping request, global::System.Threading.CancellationToken cancellationToken)
+            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_BasicRecordType_Ping(request, cancellationToken));
+    }
+
+    #endregion
 }

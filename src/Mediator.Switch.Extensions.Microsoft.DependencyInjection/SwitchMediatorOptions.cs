@@ -12,7 +12,15 @@ public class SwitchMediatorOptions
         IReadOnlyList<(Type NotificationType, IReadOnlyList<Type> HandlerTypes)> NotificationTypes, 
         IReadOnlyList<Type> PipelineBehaviorTypes)
         KnownTypes { get; set; }
-    
+
+    /// <summary>
+    /// When set, <see cref="IRequestHandler{TRequest,TResponse}"/> and
+    /// <see cref="IValueRequestHandler{TRequest,TResponse}"/> are registered in DI so that
+    /// injecting either interface runs the full pipeline (all applicable behaviors) before the
+    /// underlying handler. Set to <c>YourMediator.PipelinedHandlerTypes</c> to opt in.
+    /// </summary>
+    public IReadOnlyList<(Type RequestHandlerInterfaceType, Type PipelinedHandlerType, Type ValueRequestHandlerInterfaceType)>? PipelinedHandlerTypes { get; set; }
+
     /// <summary>
     /// The default lifetime for the services registered by the mediator.
     /// </summary>

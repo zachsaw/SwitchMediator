@@ -141,6 +141,25 @@ public static class CodeGenerator
                     $"typeof({b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>)");
             });
 
+        // Generate pipelined handler wrappers — one per handled request
+        // These implement IRequestHandler<TRequest,TResponse> and IValueRequestHandler<TRequest,TResponse>
+        // so that the full pipeline runs when the handler is injected directly from DI.
+        var pipelinedHandlers = handlers
+            .Where(h => usedRequests.Contains(h.TRequest, SymbolEqualityComparer.Default))
+            .ToList();
+
+        var pipelinedHandlerClasses = pipelinedHandlers
+            .Select(h => GeneratePipelinedHandlerClass(className, h));
+
+        var pipelinedHandlerTypeEntries = pipelinedHandlers
+            .Select(h =>
+            {
+                var requestFqn = h.TRequest.ToDisplayString(_fqn);
+                var responseFqn = h.TResponse.ToDisplayString(_fqn);
+                var wrapperClassName = $"{className}.PipelinedHandler_{h.TRequest.GetVariableName(false)}";
+                return $"(typeof(global::Mediator.Switch.IRequestHandler<{requestFqn}, {responseFqn}>), typeof({wrapperClassName}), typeof(global::Mediator.Switch.IValueRequestHandler<{requestFqn}, {responseFqn}>))";
+            });
+
         // Generate the complete SwitchMediator class
         return Normalize(
             $$"""
@@ -193,6 +212,11 @@ public static class CodeGenerator
                    public static (global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes, global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes, global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes) KnownTypes
                    {
                        get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
+                   }
+               
+                   public static global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes
+                   {
+                       get { return SwitchMediatorKnownTypes.PipelinedHandlerTypes; }
                    }
                
                    public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
@@ -320,7 +344,7 @@ public static class CodeGenerator
                                {{string.Join(",\n                ", requestHandlerTypes)}}
                            }.AsReadOnly();
                    
-                       public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes = 
+                       public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =
                           new (global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)[] {
                                {{string.Join(",\n                ", notificationTypes)}}
                           }.AsReadOnly();
@@ -329,7 +353,18 @@ public static class CodeGenerator
                           new global::System.Type[] {
                                {{string.Join(",\n                ", pipelineBehaviorTypes.Concat(notificationPipelineBehaviorTypes))}}
                           }.AsReadOnly();
-                   }    
+               
+                       public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes =
+                          new (global::System.Type, global::System.Type, global::System.Type)[] {
+                               {{string.Join(",\n                ", pipelinedHandlerTypeEntries)}}
+                          }.AsReadOnly();
+                   }
+
+                   #region Pipelined Handler Wrappers
+
+                   {{string.Join("\n\n    ", pipelinedHandlerClasses)}}
+
+                   #endregion
                }
                """);
     }
@@ -548,6 +583,46 @@ public static class CodeGenerator
                          
                          return
                              {{chain}};
+                     }
+                 """;
+    }
+
+    private static string GeneratePipelinedHandlerClass(
+        string mediatorClassName,
+        (INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask) handler)
+    {
+        var requestFqn = handler.TRequest.ToDisplayString(_fqn);
+        var responseFqn = handler.TResponse.ToDisplayString(_fqn);
+        var requestVarNamePascal = handler.TRequest.GetVariableName(false);
+        var innerClassName = $"PipelinedHandler_{requestVarNamePascal}";
+        var handleMethodName = $"Handle_{requestVarNamePascal}";
+
+        // Task path: call Handle_XXX directly if Task-based, otherwise wrap in .AsTask()
+        var taskBody = handler.IsValueTask
+            ? $"_mediator.{handleMethodName}(request, cancellationToken).AsTask()"
+            : $"_mediator.{handleMethodName}(request, cancellationToken)";
+
+        // ValueTask path: wrap in new ValueTask<T>() if Task-based, otherwise call directly
+        var valueTaskBody = handler.IsValueTask
+            ? $"_mediator.{handleMethodName}(request, cancellationToken)"
+            : $"new global::System.Threading.Tasks.ValueTask<{responseFqn}>(_mediator.{handleMethodName}(request, cancellationToken))";
+
+        return $$"""
+                 public sealed class {{innerClassName}} :
+                         global::Mediator.Switch.IRequestHandler<{{requestFqn}}, {{responseFqn}}>,
+                         global::Mediator.Switch.IValueRequestHandler<{{requestFqn}}, {{responseFqn}}>
+                     {
+                         private readonly {{mediatorClassName}} _mediator;
+                 
+                         public {{innerClassName}}({{mediatorClassName}} mediator) => _mediator = mediator;
+                 
+                         global::System.Threading.Tasks.Task<{{responseFqn}}> global::Mediator.Switch.IRequestHandler<{{requestFqn}}, {{responseFqn}}>.Handle(
+                             {{requestFqn}} request, global::System.Threading.CancellationToken cancellationToken)
+                             => {{taskBody}};
+                 
+                         global::System.Threading.Tasks.ValueTask<{{responseFqn}}> global::Mediator.Switch.IValueRequestHandler<{{requestFqn}}, {{responseFqn}}>.Handle(
+                             {{requestFqn}} request, global::System.Threading.CancellationToken cancellationToken)
+                             => {{valueTaskBody}};
                      }
                  """;
     }

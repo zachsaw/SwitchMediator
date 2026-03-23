@@ -60,6 +60,11 @@ public static class ServiceCollectionExtensions
             RegisterPipelineBehaviors(services, options.KnownTypes.PipelineBehaviorTypes, options);
         }
 
+        if (options.PipelinedHandlerTypes != null)
+        {
+            RegisterPipelinedHandlers<TSwitchMediator>(services, options.PipelinedHandlerTypes, options);
+        }
+
         return services;
     }
 
@@ -102,6 +107,42 @@ public static class ServiceCollectionExtensions
         foreach (var behaviorType in behaviorTypes)
         {
             services.Add(new ServiceDescriptor(behaviorType, behaviorType, options.ServiceLifetime));
+        }
+    }
+
+    /// <summary>
+    /// Registers pipelined handler wrappers so that <see cref="IRequestHandler{TRequest,TResponse}"/> and
+    /// <see cref="IValueRequestHandler{TRequest,TResponse}"/> resolve from DI with the full behavior pipeline applied.
+    /// Each wrapper is a generated nested class inside the mediator that forwards to the private
+    /// <c>Handle_XXX</c> method — ensuring every applicable behavior runs.
+    /// </summary>
+    private static void RegisterPipelinedHandlers<TSwitchMediator>(
+        IServiceCollection services,
+        IReadOnlyList<(Type RequestHandlerInterfaceType, Type PipelinedHandlerType, Type ValueRequestHandlerInterfaceType)> pipelinedHandlerTypes,
+        SwitchMediatorOptions options)
+        where TSwitchMediator : class, IMediator
+    {
+        foreach (var (requestHandlerInterface, pipelinedHandlerType, valueRequestHandlerInterface) in pipelinedHandlerTypes)
+        {
+            var capturedType = pipelinedHandlerType;
+
+            // Register the concrete wrapper, injecting the mediator instance
+            services.Add(new ServiceDescriptor(
+                capturedType,
+                sp => Activator.CreateInstance(capturedType, (TSwitchMediator)sp.GetRequiredService<IMediator>())!,
+                options.ServiceLifetime));
+
+            // IRequestHandler<TRequest,TResponse> → pipelined wrapper (Task-based pipeline)
+            services.Add(new ServiceDescriptor(
+                requestHandlerInterface,
+                sp => sp.GetRequiredService(capturedType),
+                options.ServiceLifetime));
+
+            // IValueRequestHandler<TRequest,TResponse> → same pipelined wrapper (ValueTask-based pipeline)
+            services.Add(new ServiceDescriptor(
+                valueRequestHandlerInterface,
+                sp => sp.GetRequiredService(capturedType),
+                options.ServiceLifetime));
         }
     }
 

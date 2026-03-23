@@ -50,6 +50,11 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
+    public static global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes
+    {
+        get { return SwitchMediatorKnownTypes.PipelinedHandlerTypes; }
+    }
+
     public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (TaskSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
@@ -225,5 +230,49 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
            new global::System.Type[] {
 
            }.AsReadOnly();
+
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes =
+           new (global::System.Type, global::System.Type, global::System.Type)[] {
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.MultipleRequests.GetProductRequest, string>), typeof(TestMediator.PipelinedHandler_Tests_MultipleRequests_GetProductRequest), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.MultipleRequests.GetProductRequest, string>)),
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.MultipleRequests.GetInventoryRequest, int>), typeof(TestMediator.PipelinedHandler_Tests_MultipleRequests_GetInventoryRequest), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.MultipleRequests.GetInventoryRequest, int>))
+           }.AsReadOnly();
     }
+
+    #region Pipelined Handler Wrappers
+
+    public sealed class PipelinedHandler_Tests_MultipleRequests_GetProductRequest :
+        global::Mediator.Switch.IRequestHandler<global::Tests.MultipleRequests.GetProductRequest, string>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.MultipleRequests.GetProductRequest, string>
+    {
+        private readonly TestMediator _mediator;
+
+        public PipelinedHandler_Tests_MultipleRequests_GetProductRequest(TestMediator mediator) => _mediator = mediator;
+
+        global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.MultipleRequests.GetProductRequest, string>.Handle(
+            global::Tests.MultipleRequests.GetProductRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_MultipleRequests_GetProductRequest(request, cancellationToken);
+
+        global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.MultipleRequests.GetProductRequest, string>.Handle(
+            global::Tests.MultipleRequests.GetProductRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_MultipleRequests_GetProductRequest(request, cancellationToken));
+    }
+
+    public sealed class PipelinedHandler_Tests_MultipleRequests_GetInventoryRequest :
+        global::Mediator.Switch.IRequestHandler<global::Tests.MultipleRequests.GetInventoryRequest, int>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.MultipleRequests.GetInventoryRequest, int>
+    {
+        private readonly TestMediator _mediator;
+
+        public PipelinedHandler_Tests_MultipleRequests_GetInventoryRequest(TestMediator mediator) => _mediator = mediator;
+
+        global::System.Threading.Tasks.Task<int> global::Mediator.Switch.IRequestHandler<global::Tests.MultipleRequests.GetInventoryRequest, int>.Handle(
+            global::Tests.MultipleRequests.GetInventoryRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_MultipleRequests_GetInventoryRequest(request, cancellationToken);
+
+        global::System.Threading.Tasks.ValueTask<int> global::Mediator.Switch.IValueRequestHandler<global::Tests.MultipleRequests.GetInventoryRequest, int>.Handle(
+            global::Tests.MultipleRequests.GetInventoryRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => new global::System.Threading.Tasks.ValueTask<int>(_mediator.Handle_Tests_MultipleRequests_GetInventoryRequest(request, cancellationToken));
+    }
+
+    #endregion
 }

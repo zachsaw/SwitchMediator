@@ -53,6 +53,11 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         get { return (SwitchMediatorKnownTypes.RequestHandlerTypes, SwitchMediatorKnownTypes.NotificationTypes, SwitchMediatorKnownTypes.PipelineBehaviorTypes); }
     }
 
+    public static global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes
+    {
+        get { return SwitchMediatorKnownTypes.PipelinedHandlerTypes; }
+    }
+
     public global::System.Threading.Tasks.Task<TResponse> Send<TResponse>(global::Mediator.Switch.IRequest<TResponse> request, global::System.Threading.CancellationToken cancellationToken = default)
     {
         if (TaskSendSwitchCase.Cases.TryGetValue(request.GetType(), out var handle))
@@ -237,5 +242,49 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
                 typeof(global::Tests.ConstrainedPipeline.SpecialProcessingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>),
                 typeof(global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.NormalRequest, int>)
            }.AsReadOnly();
+
+        public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes =
+           new (global::System.Type, global::System.Type, global::System.Type)[] {
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>), typeof(TestMediator.PipelinedHandler_Tests_ConstrainedPipeline_SpecialProcessRequest), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>)),
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>), typeof(TestMediator.PipelinedHandler_Tests_ConstrainedPipeline_NormalRequest), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>))
+           }.AsReadOnly();
     }
+
+    #region Pipelined Handler Wrappers
+
+    public sealed class PipelinedHandler_Tests_ConstrainedPipeline_SpecialProcessRequest :
+        global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>
+    {
+        private readonly TestMediator _mediator;
+
+        public PipelinedHandler_Tests_ConstrainedPipeline_SpecialProcessRequest(TestMediator mediator) => _mediator = mediator;
+
+        global::System.Threading.Tasks.Task<global::System.Guid> global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>.Handle(
+            global::Tests.ConstrainedPipeline.SpecialProcessRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_ConstrainedPipeline_SpecialProcessRequest(request, cancellationToken);
+
+        global::System.Threading.Tasks.ValueTask<global::System.Guid> global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>.Handle(
+            global::Tests.ConstrainedPipeline.SpecialProcessRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => new global::System.Threading.Tasks.ValueTask<global::System.Guid>(_mediator.Handle_Tests_ConstrainedPipeline_SpecialProcessRequest(request, cancellationToken));
+    }
+
+    public sealed class PipelinedHandler_Tests_ConstrainedPipeline_NormalRequest :
+        global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>
+    {
+        private readonly TestMediator _mediator;
+
+        public PipelinedHandler_Tests_ConstrainedPipeline_NormalRequest(TestMediator mediator) => _mediator = mediator;
+
+        global::System.Threading.Tasks.Task<int> global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>.Handle(
+            global::Tests.ConstrainedPipeline.NormalRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_ConstrainedPipeline_NormalRequest(request, cancellationToken);
+
+        global::System.Threading.Tasks.ValueTask<int> global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>.Handle(
+            global::Tests.ConstrainedPipeline.NormalRequest request, global::System.Threading.CancellationToken cancellationToken)
+            => new global::System.Threading.Tasks.ValueTask<int>(_mediator.Handle_Tests_ConstrainedPipeline_NormalRequest(request, cancellationToken));
+    }
+
+    #endregion
 }

@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 using System.Collections.Frozen;
 #endif
 
-namespace Tests.ReferencesPublisher;
+namespace Tests.PipelinedHandlerInjection;
 
 #pragma warning disable CS1998
 
@@ -29,7 +29,10 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.ReferencesPublisher.PingHandler? _tests_ReferencesPublisher_PingHandler;
+    private global::Tests.PipelinedHandlerInjection.PingHandler? _tests_PipelinedHandlerInjection_PingHandler;
+    private global::Tests.PipelinedHandlerInjection.PongHandler? _tests_PipelinedHandlerInjection_PongHandler;
+    private global::Tests.PipelinedHandlerInjection.PingBehavior<global::Tests.PipelinedHandlerInjection.Ping, string>? _tests_PipelinedHandlerInjection_PingBehavior__tests_PipelinedHandlerInjection_Ping;
+    private global::Tests.PipelinedHandlerInjection.PongBehavior<global::Tests.PipelinedHandlerInjection.Pong, string>? _tests_PipelinedHandlerInjection_PongBehavior__tests_PipelinedHandlerInjection_Pong;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -68,10 +71,15 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
     {
         public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, object> Cases = new (global::System.Type, object)[]
         {
-            ( // case Tests.ReferencesPublisher.Ping:
-                typeof(global::Tests.ReferencesPublisher.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<string>>) ((instance, request, cancellationToken) =>
-                    instance.Handle_Tests_ReferencesPublisher_Ping(
-                        (global::Tests.ReferencesPublisher.Ping) request, cancellationToken))
+            ( // case Tests.PipelinedHandlerInjection.Ping:
+                typeof(global::Tests.PipelinedHandlerInjection.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<string>>) ((instance, request, cancellationToken) =>
+                    instance.Handle_Tests_PipelinedHandlerInjection_Ping(
+                        (global::Tests.PipelinedHandlerInjection.Ping) request, cancellationToken))
+            ),
+            ( // case Tests.PipelinedHandlerInjection.Pong:
+                typeof(global::Tests.PipelinedHandlerInjection.Pong), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<string>>) ((instance, request, cancellationToken) =>
+                    instance.Handle_Tests_PipelinedHandlerInjection_Pong(
+                        (global::Tests.PipelinedHandlerInjection.Pong) request, cancellationToken).AsTask())
             )
         }
 #if NET8_0_OR_GREATER
@@ -96,11 +104,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
     {
         public static readonly global::System.Collections.Generic.IDictionary<global::System.Type, object> Cases = new (global::System.Type, object)[]
         {
-            ( // case Tests.ReferencesPublisher.Ping:
-                typeof(global::Tests.ReferencesPublisher.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>>) ((instance, request, cancellationToken) =>
+            ( // case Tests.PipelinedHandlerInjection.Ping:
+                typeof(global::Tests.PipelinedHandlerInjection.Ping), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>>) ((instance, request, cancellationToken) =>
                     new global::System.Threading.Tasks.ValueTask<string>(
-                        instance.Handle_Tests_ReferencesPublisher_Ping(
-                            (global::Tests.ReferencesPublisher.Ping) request, cancellationToken)))
+                        instance.Handle_Tests_PipelinedHandlerInjection_Ping(
+                            (global::Tests.PipelinedHandlerInjection.Ping) request, cancellationToken)))
+            ),
+            ( // case Tests.PipelinedHandlerInjection.Pong:
+                typeof(global::Tests.PipelinedHandlerInjection.Pong), (global::System.Func<TestMediator, global::Mediator.Switch.IRequest<string>, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>>) ((instance, request, cancellationToken) =>
+                    instance.Handle_Tests_PipelinedHandlerInjection_Pong(
+                        (global::Tests.PipelinedHandlerInjection.Pong) request, cancellationToken))
             )
         }
 #if NET8_0_OR_GREATER
@@ -169,15 +182,30 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             (t => t.Item1, t => t.Item2);
     }
 
-    private global::System.Threading.Tasks.Task<string> Handle_Tests_ReferencesPublisher_Ping(
-        global::Tests.ReferencesPublisher.Ping request,
+    private global::System.Threading.Tasks.Task<string> Handle_Tests_PipelinedHandlerInjection_Ping(
+        global::Tests.PipelinedHandlerInjection.Ping request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-
-        var tests_ReferencesPublisher_PingHandler = Get(ref _tests_ReferencesPublisher_PingHandler);
+        var tests_PipelinedHandlerInjection_PingBehavior__tests_PipelinedHandlerInjection_Ping = Get(ref _tests_PipelinedHandlerInjection_PingBehavior__tests_PipelinedHandlerInjection_Ping);
+        var tests_PipelinedHandlerInjection_PingHandler = Get(ref _tests_PipelinedHandlerInjection_PingHandler);
 
         return
-            /* Request Handler */ tests_ReferencesPublisher_PingHandler.Handle(request, cancellationToken);
+            tests_PipelinedHandlerInjection_PingBehavior__tests_PipelinedHandlerInjection_Ping.Handle(request, ct =>
+            /* Request Handler */ tests_PipelinedHandlerInjection_PingHandler.Handle(request, ct),
+            cancellationToken);
+    }
+
+    private global::System.Threading.Tasks.ValueTask<string> Handle_Tests_PipelinedHandlerInjection_Pong(
+        global::Tests.PipelinedHandlerInjection.Pong request,
+        global::System.Threading.CancellationToken cancellationToken)
+    {
+        var tests_PipelinedHandlerInjection_PongBehavior__tests_PipelinedHandlerInjection_Pong = Get(ref _tests_PipelinedHandlerInjection_PongBehavior__tests_PipelinedHandlerInjection_Pong);
+        var tests_PipelinedHandlerInjection_PongHandler = Get(ref _tests_PipelinedHandlerInjection_PongHandler);
+
+        return
+            tests_PipelinedHandlerInjection_PongBehavior__tests_PipelinedHandlerInjection_Pong.Handle(request, ct =>
+            /* Request Handler */ tests_PipelinedHandlerInjection_PongHandler.Handle(request, ct),
+            cancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -194,7 +222,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
     {
         public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> RequestHandlerTypes =
             new global::System.Type[] {
-                typeof(global::Tests.ReferencesPublisher.PingHandler)
+                typeof(global::Tests.PipelinedHandlerInjection.PingHandler),
+                typeof(global::Tests.PipelinedHandlerInjection.PongHandler)
             }.AsReadOnly();
 
         public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type NotificationType, global::System.Collections.Generic.IReadOnlyList<global::System.Type> HandlerTypes)> NotificationTypes =
@@ -204,32 +233,51 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
         public static readonly global::System.Collections.Generic.IReadOnlyList<global::System.Type> PipelineBehaviorTypes =
            new global::System.Type[] {
-
+                typeof(global::Tests.PipelinedHandlerInjection.PingBehavior<global::Tests.PipelinedHandlerInjection.Ping, string>),
+                typeof(global::Tests.PipelinedHandlerInjection.PongBehavior<global::Tests.PipelinedHandlerInjection.Pong, string>)
            }.AsReadOnly();
 
         public static readonly global::System.Collections.Generic.IReadOnlyList<(global::System.Type RequestHandlerInterfaceType, global::System.Type PipelinedHandlerType, global::System.Type ValueRequestHandlerInterfaceType)> PipelinedHandlerTypes =
            new (global::System.Type, global::System.Type, global::System.Type)[] {
-                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.ReferencesPublisher.Ping, string>), typeof(TestMediator.PipelinedHandler_Tests_ReferencesPublisher_Ping), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.ReferencesPublisher.Ping, string>))
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.PipelinedHandlerInjection.Ping, string>), typeof(TestMediator.PipelinedHandler_Tests_PipelinedHandlerInjection_Ping), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.PipelinedHandlerInjection.Ping, string>)),
+                (typeof(global::Mediator.Switch.IRequestHandler<global::Tests.PipelinedHandlerInjection.Pong, string>), typeof(TestMediator.PipelinedHandler_Tests_PipelinedHandlerInjection_Pong), typeof(global::Mediator.Switch.IValueRequestHandler<global::Tests.PipelinedHandlerInjection.Pong, string>))
            }.AsReadOnly();
     }
 
     #region Pipelined Handler Wrappers
 
-    public sealed class PipelinedHandler_Tests_ReferencesPublisher_Ping :
-        global::Mediator.Switch.IRequestHandler<global::Tests.ReferencesPublisher.Ping, string>,
-        global::Mediator.Switch.IValueRequestHandler<global::Tests.ReferencesPublisher.Ping, string>
+    public sealed class PipelinedHandler_Tests_PipelinedHandlerInjection_Ping :
+        global::Mediator.Switch.IRequestHandler<global::Tests.PipelinedHandlerInjection.Ping, string>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.PipelinedHandlerInjection.Ping, string>
     {
         private readonly TestMediator _mediator;
 
-        public PipelinedHandler_Tests_ReferencesPublisher_Ping(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_PipelinedHandlerInjection_Ping(TestMediator mediator) => _mediator = mediator;
 
-        global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.ReferencesPublisher.Ping, string>.Handle(
-            global::Tests.ReferencesPublisher.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_ReferencesPublisher_Ping(request, cancellationToken);
+        global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.PipelinedHandlerInjection.Ping, string>.Handle(
+            global::Tests.PipelinedHandlerInjection.Ping request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_PipelinedHandlerInjection_Ping(request, cancellationToken);
 
-        global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.ReferencesPublisher.Ping, string>.Handle(
-            global::Tests.ReferencesPublisher.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_ReferencesPublisher_Ping(request, cancellationToken));
+        global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.PipelinedHandlerInjection.Ping, string>.Handle(
+            global::Tests.PipelinedHandlerInjection.Ping request, global::System.Threading.CancellationToken cancellationToken)
+            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_PipelinedHandlerInjection_Ping(request, cancellationToken));
+    }
+
+    public sealed class PipelinedHandler_Tests_PipelinedHandlerInjection_Pong :
+        global::Mediator.Switch.IRequestHandler<global::Tests.PipelinedHandlerInjection.Pong, string>,
+        global::Mediator.Switch.IValueRequestHandler<global::Tests.PipelinedHandlerInjection.Pong, string>
+    {
+        private readonly TestMediator _mediator;
+
+        public PipelinedHandler_Tests_PipelinedHandlerInjection_Pong(TestMediator mediator) => _mediator = mediator;
+
+        global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.PipelinedHandlerInjection.Pong, string>.Handle(
+            global::Tests.PipelinedHandlerInjection.Pong request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_PipelinedHandlerInjection_Pong(request, cancellationToken).AsTask();
+
+        global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.PipelinedHandlerInjection.Pong, string>.Handle(
+            global::Tests.PipelinedHandlerInjection.Pong request, global::System.Threading.CancellationToken cancellationToken)
+            => _mediator.Handle_Tests_PipelinedHandlerInjection_Pong(request, cancellationToken);
     }
 
     #endregion
