@@ -62,7 +62,7 @@ public static class ServiceCollectionExtensions
 
         if (options.PipelinedHandlerTypes != null)
         {
-            RegisterPipelinedHandlers<TSwitchMediator>(services, options.PipelinedHandlerTypes, options);
+            RegisterPipelinedHandlers(services, options.PipelinedHandlerTypes, options);
         }
 
         return services;
@@ -113,24 +113,21 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers pipelined handler wrappers so that <see cref="IRequestHandler{TRequest,TResponse}"/> and
     /// <see cref="IValueRequestHandler{TRequest,TResponse}"/> resolve from DI with the full behavior pipeline applied.
-    /// Each wrapper is a generated nested class inside the mediator that forwards to the private
-    /// <c>Handle_XXX</c> method — ensuring every applicable behavior runs.
+    /// Each wrapper is a generated nested class inside the mediator that contains the full inlined pipeline chain.
+    /// The wrapper's constructor takes the applicable behaviors and raw handler directly from DI —
+    /// no reference to the mediator is needed, making the injection fully independent.
     /// </summary>
-    private static void RegisterPipelinedHandlers<TSwitchMediator>(
+    private static void RegisterPipelinedHandlers(
         IServiceCollection services,
         IReadOnlyList<(Type RequestHandlerInterfaceType, Type PipelinedHandlerType, Type ValueRequestHandlerInterfaceType)> pipelinedHandlerTypes,
         SwitchMediatorOptions options)
-        where TSwitchMediator : class, IMediator
     {
         foreach (var (requestHandlerInterface, pipelinedHandlerType, valueRequestHandlerInterface) in pipelinedHandlerTypes)
         {
             var capturedType = pipelinedHandlerType;
 
-            // Register the concrete wrapper, injecting the mediator instance
-            services.Add(new ServiceDescriptor(
-                capturedType,
-                sp => Activator.CreateInstance(capturedType, (TSwitchMediator)sp.GetRequiredService<IMediator>())!,
-                options.ServiceLifetime));
+            // Register the concrete wrapper by type — DI resolves its constructor args (behaviors + handler) directly
+            services.Add(new ServiceDescriptor(capturedType, capturedType, options.ServiceLifetime));
 
             // IRequestHandler<TRequest,TResponse> → pipelined wrapper (Task-based pipeline)
             services.Add(new ServiceDescriptor(

@@ -288,34 +288,90 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.FullPipeline.GetUserRequest, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.FullPipeline.GetUserRequest, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.FullPipeline.AuditBehavior<global::Tests.FullPipeline.GetUserRequest, string> _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest;
+        private readonly global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.GetUserRequest, string> _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest;
+        private readonly global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.GetUserRequest, string> _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest;
+        private readonly global::Tests.FullPipeline.GetUserRequestHandler _tests_FullPipeline_GetUserRequestHandler;
 
-        public PipelinedHandler_Tests_FullPipeline_GetUserRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_FullPipeline_GetUserRequest(global::Tests.FullPipeline.AuditBehavior<global::Tests.FullPipeline.GetUserRequest, string> tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest, global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.GetUserRequest, string> tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest, global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.GetUserRequest, string> tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest, global::Tests.FullPipeline.GetUserRequestHandler tests_FullPipeline_GetUserRequestHandler)
+        {
+            _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest = tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest;
+            _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest = tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest;
+            _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest = tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest;
+            _tests_FullPipeline_GetUserRequestHandler = tests_FullPipeline_GetUserRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<string> HandleCore(
+            global::Tests.FullPipeline.GetUserRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest = _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest;
+            var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest = _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest;
+            var tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest = _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest;
+            var tests_FullPipeline_GetUserRequestHandler = _tests_FullPipeline_GetUserRequestHandler;
+
+            return
+                tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
+                tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
+                tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
+                /* Request Handler */ tests_FullPipeline_GetUserRequestHandler.Handle(request, ct),
+                ct),
+                ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.FullPipeline.GetUserRequest, string>.Handle(
             global::Tests.FullPipeline.GetUserRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_FullPipeline_GetUserRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.FullPipeline.GetUserRequest, string>.Handle(
             global::Tests.FullPipeline.GetUserRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_FullPipeline_GetUserRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<string>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_FullPipeline_CreateOrderRequest :
         global::Mediator.Switch.IRequestHandler<global::Tests.FullPipeline.CreateOrderRequest, int>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.FullPipeline.CreateOrderRequest, int>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.FullPipeline.TransactionBehavior<global::Tests.FullPipeline.CreateOrderRequest, int> _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest;
+        private readonly global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.CreateOrderRequest, int> _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest;
+        private readonly global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.CreateOrderRequest, int> _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest;
+        private readonly global::Tests.FullPipeline.CreateOrderRequestHandler _tests_FullPipeline_CreateOrderRequestHandler;
 
-        public PipelinedHandler_Tests_FullPipeline_CreateOrderRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_FullPipeline_CreateOrderRequest(global::Tests.FullPipeline.TransactionBehavior<global::Tests.FullPipeline.CreateOrderRequest, int> tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest, global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.CreateOrderRequest, int> tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest, global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.CreateOrderRequest, int> tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest, global::Tests.FullPipeline.CreateOrderRequestHandler tests_FullPipeline_CreateOrderRequestHandler)
+        {
+            _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest = tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest;
+            _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest = tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest;
+            _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest = tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest;
+            _tests_FullPipeline_CreateOrderRequestHandler = tests_FullPipeline_CreateOrderRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<int> HandleCore(
+            global::Tests.FullPipeline.CreateOrderRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest = _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest;
+            var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest = _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest;
+            var tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest = _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest;
+            var tests_FullPipeline_CreateOrderRequestHandler = _tests_FullPipeline_CreateOrderRequestHandler;
+
+            return
+                tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
+                tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
+                tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
+                /* Request Handler */ tests_FullPipeline_CreateOrderRequestHandler.Handle(request, ct),
+                ct),
+                ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<int> global::Mediator.Switch.IRequestHandler<global::Tests.FullPipeline.CreateOrderRequest, int>.Handle(
             global::Tests.FullPipeline.CreateOrderRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_FullPipeline_CreateOrderRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<int> global::Mediator.Switch.IValueRequestHandler<global::Tests.FullPipeline.CreateOrderRequest, int>.Handle(
             global::Tests.FullPipeline.CreateOrderRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<int>(_mediator.Handle_Tests_FullPipeline_CreateOrderRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<int>(HandleCore(request, cancellationToken));
     }
 
     #endregion

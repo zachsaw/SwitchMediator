@@ -149,7 +149,11 @@ public static class CodeGenerator
             .ToList();
 
         var pipelinedHandlerClasses = pipelinedHandlers
-            .Select(h => GeneratePipelinedHandlerClass(className, h));
+            .Select(h =>
+            {
+                var entry = actualRequestBehaviors.First(r => SymbolEqualityComparer.Default.Equals(r.Request.Class, h.TRequest));
+                return GeneratePipelinedHandlerClass(h, entry.Behaviors);
+            });
 
         var pipelinedHandlerTypeEntries = pipelinedHandlers
             .Select(h =>
@@ -588,41 +592,89 @@ public static class CodeGenerator
     }
 
     private static string GeneratePipelinedHandlerClass(
-        string mediatorClassName,
-        (INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask) handler)
+        (INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask) handler,
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> applicableBehaviors)
     {
         var requestFqn = handler.TRequest.ToDisplayString(_fqn);
         var responseFqn = handler.TResponse.ToDisplayString(_fqn);
+        var requestName = handler.TRequest.GetVariableName();
         var requestVarNamePascal = handler.TRequest.GetVariableName(false);
         var innerClassName = $"PipelinedHandler_{requestVarNamePascal}";
-        var handleMethodName = $"Handle_{requestVarNamePascal}";
 
-        // Task path: call Handle_XXX directly if Task-based, otherwise wrap in .AsTask()
-        var taskBody = handler.IsValueTask
-            ? $"_mediator.{handleMethodName}(request, cancellationToken).AsTask()"
-            : $"_mediator.{handleMethodName}(request, cancellationToken)";
+        // Native return type of HandleCore matches the handler's async pattern
+        var nativeReturnType = handler.IsValueTask
+            ? $"global::System.Threading.Tasks.ValueTask<{responseFqn}>"
+            : $"global::System.Threading.Tasks.Task<{responseFqn}>";
 
-        // ValueTask path: wrap in new ValueTask<T>() if Task-based, otherwise call directly
-        var valueTaskBody = handler.IsValueTask
-            ? $"_mediator.{handleMethodName}(request, cancellationToken)"
-            : $"new global::System.Threading.Tasks.ValueTask<{responseFqn}>(_mediator.{handleMethodName}(request, cancellationToken))";
+        // Fields — one per behavior (closed generic) + one for the raw handler
+        var behaviorFields = applicableBehaviors.Select(b =>
+            $"private readonly {b.Class.ToDisplayString(_fqn).DropGenerics()}<{requestFqn}, {b.TResponse.ToDisplayString(_fqn)}> _{b.Class.GetVariableName()}__{requestName};");
+        var handlerField = $"private readonly {handler.Class.ToDisplayString(_fqn)} _{handler.Class.GetVariableName()};";
+
+        // Constructor parameters
+        var ctorBehaviorParams = applicableBehaviors.Select(b =>
+            $"{b.Class.ToDisplayString(_fqn).DropGenerics()}<{requestFqn}, {b.TResponse.ToDisplayString(_fqn)}> {b.Class.GetVariableName()}__{requestName}");
+        var ctorHandlerParam = $"{handler.Class.ToDisplayString(_fqn)} {handler.Class.GetVariableName()}";
+        var ctorParams = ctorBehaviorParams.Append(ctorHandlerParam);
+
+        // Constructor body — assign each parameter to its backing field
+        var ctorBehaviorAssignments = applicableBehaviors.Select(b =>
+            $"_{b.Class.GetVariableName()}__{requestName} = {b.Class.GetVariableName()}__{requestName};");
+        var ctorHandlerAssignment = $"_{handler.Class.GetVariableName()} = {handler.Class.GetVariableName()};";
+        var ctorAssignments = ctorBehaviorAssignments.Append(ctorHandlerAssignment);
+
+        // HandleCore body — local aliases from fields, then the russian doll chain
+        // (same pattern as TryGenerateBehaviorMethod but self-contained; 16-space continuation to
+        // align with the chain being placed at 16 relative spaces inside HandleCore's body)
+        var behaviorAliases = applicableBehaviors.Select(b =>
+            $"var {b.Class.GetVariableName()}__{requestName} = _{b.Class.GetVariableName()}__{requestName};");
+        var handlerAlias = $"var {handler.Class.GetVariableName()} = _{handler.Class.GetVariableName()};";
+        var coreBodyVarLines = behaviorAliases.Append(handlerAlias);
+
+        var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall, "                ");
+
+        // IRequestHandler<T,R>.Handle: if the pipeline is Task-native → direct; if ValueTask-native → .AsTask()
+        var taskHandleBody = handler.IsValueTask
+            ? "HandleCore(request, cancellationToken).AsTask()"
+            : "HandleCore(request, cancellationToken)";
+
+        // IValueRequestHandler<T,R>.Handle: if the pipeline is Task-native → new ValueTask<T>(); if ValueTask-native → direct
+        var valueTaskHandleBody = handler.IsValueTask
+            ? "HandleCore(request, cancellationToken)"
+            : $"new global::System.Threading.Tasks.ValueTask<{responseFqn}>(HandleCore(request, cancellationToken))";
+
+        var allFields = behaviorFields.Append(handlerField);
 
         return $$"""
                  public sealed class {{innerClassName}} :
                          global::Mediator.Switch.IRequestHandler<{{requestFqn}}, {{responseFqn}}>,
                          global::Mediator.Switch.IValueRequestHandler<{{requestFqn}}, {{responseFqn}}>
                      {
-                         private readonly {{mediatorClassName}} _mediator;
+                         {{string.Join("\n        ", allFields)}}
                  
-                         public {{innerClassName}}({{mediatorClassName}} mediator) => _mediator = mediator;
+                         public {{innerClassName}}({{string.Join(", ", ctorParams)}})
+                         {
+                             {{string.Join("\n            ", ctorAssignments)}}
+                         }
+                 
+                         private {{nativeReturnType}} HandleCore(
+                             {{requestFqn}} request,
+                             global::System.Threading.CancellationToken cancellationToken)
+                         {
+                             {{string.Join("\n            ", coreBodyVarLines)}}
+                 
+                             return
+                                 {{chain}};
+                         }
                  
                          global::System.Threading.Tasks.Task<{{responseFqn}}> global::Mediator.Switch.IRequestHandler<{{requestFqn}}, {{responseFqn}}>.Handle(
                              {{requestFqn}} request, global::System.Threading.CancellationToken cancellationToken)
-                             => {{taskBody}};
+                             => {{taskHandleBody}};
                  
                          global::System.Threading.Tasks.ValueTask<{{responseFqn}}> global::Mediator.Switch.IValueRequestHandler<{{requestFqn}}, {{responseFqn}}>.Handle(
                              {{requestFqn}} request, global::System.Threading.CancellationToken cancellationToken)
-                             => {{valueTaskBody}};
+                             => {{valueTaskHandleBody}};
                      }
                  """;
     }

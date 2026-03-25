@@ -222,17 +222,35 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.BasicPipelineNestedType.Ping, global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicPipelineNestedType.Ping, global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.BasicPipelineNestedType.GenericBehavior<global::Tests.BasicPipelineNestedType.Ping, global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>> _tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping;
+        private readonly global::Tests.BasicPipelineNestedType.PingHandler _tests_BasicPipelineNestedType_PingHandler;
 
-        public PipelinedHandler_Tests_BasicPipelineNestedType_Ping(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_BasicPipelineNestedType_Ping(global::Tests.BasicPipelineNestedType.GenericBehavior<global::Tests.BasicPipelineNestedType.Ping, global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>> tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping, global::Tests.BasicPipelineNestedType.PingHandler tests_BasicPipelineNestedType_PingHandler)
+        {
+            _tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping = tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping;
+            _tests_BasicPipelineNestedType_PingHandler = tests_BasicPipelineNestedType_PingHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>> HandleCore(
+            global::Tests.BasicPipelineNestedType.Ping request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping = _tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping;
+            var tests_BasicPipelineNestedType_PingHandler = _tests_BasicPipelineNestedType_PingHandler;
+
+            return
+                tests_BasicPipelineNestedType_GenericBehavior__tests_BasicPipelineNestedType_Ping.Handle(request, ct =>
+                /* Request Handler */ tests_BasicPipelineNestedType_PingHandler.Handle(request, ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>> global::Mediator.Switch.IRequestHandler<global::Tests.BasicPipelineNestedType.Ping, global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>>.Handle(
             global::Tests.BasicPipelineNestedType.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_BasicPipelineNestedType_Ping(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>> global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicPipelineNestedType.Ping, global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>>.Handle(
             global::Tests.BasicPipelineNestedType.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>>(_mediator.Handle_Tests_BasicPipelineNestedType_Ping(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineNestedType.Result<global::Tests.BasicPipelineNestedType.VersionedResponse>>(HandleCore(request, cancellationToken));
     }
 
     #endregion

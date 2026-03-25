@@ -236,17 +236,30 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.Notifications.SimpleRequest, bool>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Notifications.SimpleRequest, bool>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Notifications.SimpleRequestHandler _tests_Notifications_SimpleRequestHandler;
 
-        public PipelinedHandler_Tests_Notifications_SimpleRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Notifications_SimpleRequest(global::Tests.Notifications.SimpleRequestHandler tests_Notifications_SimpleRequestHandler)
+        {
+            _tests_Notifications_SimpleRequestHandler = tests_Notifications_SimpleRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<bool> HandleCore(
+            global::Tests.Notifications.SimpleRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Notifications_SimpleRequestHandler = _tests_Notifications_SimpleRequestHandler;
+
+            return
+                /* Request Handler */ tests_Notifications_SimpleRequestHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<bool> global::Mediator.Switch.IRequestHandler<global::Tests.Notifications.SimpleRequest, bool>.Handle(
             global::Tests.Notifications.SimpleRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Notifications_SimpleRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<bool> global::Mediator.Switch.IValueRequestHandler<global::Tests.Notifications.SimpleRequest, bool>.Handle(
             global::Tests.Notifications.SimpleRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<bool>(_mediator.Handle_Tests_Notifications_SimpleRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<bool>(HandleCore(request, cancellationToken));
     }
 
     #endregion

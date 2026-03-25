@@ -256,34 +256,75 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid> _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
+        private readonly global::Tests.ConstrainedPipeline.SpecialProcessingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid> _tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
+        private readonly global::Tests.ConstrainedPipeline.SpecialProcessRequestHandler _tests_ConstrainedPipeline_SpecialProcessRequestHandler;
 
-        public PipelinedHandler_Tests_ConstrainedPipeline_SpecialProcessRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_ConstrainedPipeline_SpecialProcessRequest(global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid> tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest, global::Tests.ConstrainedPipeline.SpecialProcessingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid> tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest, global::Tests.ConstrainedPipeline.SpecialProcessRequestHandler tests_ConstrainedPipeline_SpecialProcessRequestHandler)
+        {
+            _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
+            _tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
+            _tests_ConstrainedPipeline_SpecialProcessRequestHandler = tests_ConstrainedPipeline_SpecialProcessRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<global::System.Guid> HandleCore(
+            global::Tests.ConstrainedPipeline.SpecialProcessRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
+            var tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = _tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
+            var tests_ConstrainedPipeline_SpecialProcessRequestHandler = _tests_ConstrainedPipeline_SpecialProcessRequestHandler;
+
+            return
+                tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, ct =>
+                tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, ct =>
+                /* Request Handler */ tests_ConstrainedPipeline_SpecialProcessRequestHandler.Handle(request, ct),
+                ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<global::System.Guid> global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>.Handle(
             global::Tests.ConstrainedPipeline.SpecialProcessRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_ConstrainedPipeline_SpecialProcessRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<global::System.Guid> global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>.Handle(
             global::Tests.ConstrainedPipeline.SpecialProcessRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<global::System.Guid>(_mediator.Handle_Tests_ConstrainedPipeline_SpecialProcessRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<global::System.Guid>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_ConstrainedPipeline_NormalRequest :
         global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.NormalRequest, int> _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest;
+        private readonly global::Tests.ConstrainedPipeline.NormalRequestHandler _tests_ConstrainedPipeline_NormalRequestHandler;
 
-        public PipelinedHandler_Tests_ConstrainedPipeline_NormalRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_ConstrainedPipeline_NormalRequest(global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.NormalRequest, int> tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest, global::Tests.ConstrainedPipeline.NormalRequestHandler tests_ConstrainedPipeline_NormalRequestHandler)
+        {
+            _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest = tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest;
+            _tests_ConstrainedPipeline_NormalRequestHandler = tests_ConstrainedPipeline_NormalRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<int> HandleCore(
+            global::Tests.ConstrainedPipeline.NormalRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest = _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest;
+            var tests_ConstrainedPipeline_NormalRequestHandler = _tests_ConstrainedPipeline_NormalRequestHandler;
+
+            return
+                tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest.Handle(request, ct =>
+                /* Request Handler */ tests_ConstrainedPipeline_NormalRequestHandler.Handle(request, ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<int> global::Mediator.Switch.IRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>.Handle(
             global::Tests.ConstrainedPipeline.NormalRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_ConstrainedPipeline_NormalRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<int> global::Mediator.Switch.IValueRequestHandler<global::Tests.ConstrainedPipeline.NormalRequest, int>.Handle(
             global::Tests.ConstrainedPipeline.NormalRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<int>(_mediator.Handle_Tests_ConstrainedPipeline_NormalRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<int>(HandleCore(request, cancellationToken));
     }
 
     #endregion

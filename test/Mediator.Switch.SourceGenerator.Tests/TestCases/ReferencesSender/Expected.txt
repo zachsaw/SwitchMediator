@@ -219,17 +219,30 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.ReferencesSender.Ping, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.ReferencesSender.Ping, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.ReferencesSender.PingHandler _tests_ReferencesSender_PingHandler;
 
-        public PipelinedHandler_Tests_ReferencesSender_Ping(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_ReferencesSender_Ping(global::Tests.ReferencesSender.PingHandler tests_ReferencesSender_PingHandler)
+        {
+            _tests_ReferencesSender_PingHandler = tests_ReferencesSender_PingHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<string> HandleCore(
+            global::Tests.ReferencesSender.Ping request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_ReferencesSender_PingHandler = _tests_ReferencesSender_PingHandler;
+
+            return
+                /* Request Handler */ tests_ReferencesSender_PingHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.ReferencesSender.Ping, string>.Handle(
             global::Tests.ReferencesSender.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_ReferencesSender_Ping(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.ReferencesSender.Ping, string>.Handle(
             global::Tests.ReferencesSender.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_ReferencesSender_Ping(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<string>(HandleCore(request, cancellationToken));
     }
 
     #endregion

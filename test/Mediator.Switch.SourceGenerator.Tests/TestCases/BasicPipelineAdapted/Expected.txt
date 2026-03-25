@@ -247,34 +247,65 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.BasicPipelineAdapted.GenericBehavior<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.VersionedResponse> _tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping;
+        private readonly global::Tests.BasicPipelineAdapted.PingHandler _tests_BasicPipelineAdapted_PingHandler;
 
-        public PipelinedHandler_Tests_BasicPipelineAdapted_Ping(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_BasicPipelineAdapted_Ping(global::Tests.BasicPipelineAdapted.GenericBehavior<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.VersionedResponse> tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping, global::Tests.BasicPipelineAdapted.PingHandler tests_BasicPipelineAdapted_PingHandler)
+        {
+            _tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping = tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping;
+            _tests_BasicPipelineAdapted_PingHandler = tests_BasicPipelineAdapted_PingHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>> HandleCore(
+            global::Tests.BasicPipelineAdapted.Ping request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping = _tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping;
+            var tests_BasicPipelineAdapted_PingHandler = _tests_BasicPipelineAdapted_PingHandler;
+
+            return
+                tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping.Handle(request, ct =>
+                /* Request Handler */ tests_BasicPipelineAdapted_PingHandler.Handle(request, ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>> global::Mediator.Switch.IRequestHandler<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>>.Handle(
             global::Tests.BasicPipelineAdapted.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_BasicPipelineAdapted_Ping(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>> global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>>.Handle(
             global::Tests.BasicPipelineAdapted.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>>(_mediator.Handle_Tests_BasicPipelineAdapted_Ping(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineAdapted.Result<global::Tests.BasicPipelineAdapted.VersionedResponse>>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_BasicPipelineAdapted_Pong :
         global::Mediator.Switch.IRequestHandler<global::Tests.BasicPipelineAdapted.Pong, global::Tests.BasicPipelineAdapted.VersionedResponse>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicPipelineAdapted.Pong, global::Tests.BasicPipelineAdapted.VersionedResponse>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.BasicPipelineAdapted.PongHandler _tests_BasicPipelineAdapted_PongHandler;
 
-        public PipelinedHandler_Tests_BasicPipelineAdapted_Pong(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_BasicPipelineAdapted_Pong(global::Tests.BasicPipelineAdapted.PongHandler tests_BasicPipelineAdapted_PongHandler)
+        {
+            _tests_BasicPipelineAdapted_PongHandler = tests_BasicPipelineAdapted_PongHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<global::Tests.BasicPipelineAdapted.VersionedResponse> HandleCore(
+            global::Tests.BasicPipelineAdapted.Pong request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_BasicPipelineAdapted_PongHandler = _tests_BasicPipelineAdapted_PongHandler;
+
+            return
+                /* Request Handler */ tests_BasicPipelineAdapted_PongHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<global::Tests.BasicPipelineAdapted.VersionedResponse> global::Mediator.Switch.IRequestHandler<global::Tests.BasicPipelineAdapted.Pong, global::Tests.BasicPipelineAdapted.VersionedResponse>.Handle(
             global::Tests.BasicPipelineAdapted.Pong request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_BasicPipelineAdapted_Pong(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineAdapted.VersionedResponse> global::Mediator.Switch.IValueRequestHandler<global::Tests.BasicPipelineAdapted.Pong, global::Tests.BasicPipelineAdapted.VersionedResponse>.Handle(
             global::Tests.BasicPipelineAdapted.Pong request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineAdapted.VersionedResponse>(_mediator.Handle_Tests_BasicPipelineAdapted_Pong(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<global::Tests.BasicPipelineAdapted.VersionedResponse>(HandleCore(request, cancellationToken));
     }
 
     #endregion

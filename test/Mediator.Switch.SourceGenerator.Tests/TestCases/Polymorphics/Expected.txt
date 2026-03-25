@@ -365,85 +365,150 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.DogRequest, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.DogRequest, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Polymorphics.DogRequestHandler _tests_Polymorphics_DogRequestHandler;
 
-        public PipelinedHandler_Tests_Polymorphics_DogRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Polymorphics_DogRequest(global::Tests.Polymorphics.DogRequestHandler tests_Polymorphics_DogRequestHandler)
+        {
+            _tests_Polymorphics_DogRequestHandler = tests_Polymorphics_DogRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<string> HandleCore(
+            global::Tests.Polymorphics.DogRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Polymorphics_DogRequestHandler = _tests_Polymorphics_DogRequestHandler;
+
+            return
+                /* Request Handler */ tests_Polymorphics_DogRequestHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.DogRequest, string>.Handle(
             global::Tests.Polymorphics.DogRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Polymorphics_DogRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.DogRequest, string>.Handle(
             global::Tests.Polymorphics.DogRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_Polymorphics_DogRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<string>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_Polymorphics_CatRequest :
         global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.CatRequest, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.CatRequest, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Polymorphics.CatRequestHandler _tests_Polymorphics_CatRequestHandler;
 
-        public PipelinedHandler_Tests_Polymorphics_CatRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Polymorphics_CatRequest(global::Tests.Polymorphics.CatRequestHandler tests_Polymorphics_CatRequestHandler)
+        {
+            _tests_Polymorphics_CatRequestHandler = tests_Polymorphics_CatRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<string> HandleCore(
+            global::Tests.Polymorphics.CatRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Polymorphics_CatRequestHandler = _tests_Polymorphics_CatRequestHandler;
+
+            return
+                /* Request Handler */ tests_Polymorphics_CatRequestHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.CatRequest, string>.Handle(
             global::Tests.Polymorphics.CatRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Polymorphics_CatRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.CatRequest, string>.Handle(
             global::Tests.Polymorphics.CatRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_Polymorphics_CatRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<string>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_Polymorphics_AnimalRequest :
         global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.AnimalRequest, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.AnimalRequest, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Polymorphics.GenericAnimalRequestHandler _tests_Polymorphics_GenericAnimalRequestHandler;
 
-        public PipelinedHandler_Tests_Polymorphics_AnimalRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Polymorphics_AnimalRequest(global::Tests.Polymorphics.GenericAnimalRequestHandler tests_Polymorphics_GenericAnimalRequestHandler)
+        {
+            _tests_Polymorphics_GenericAnimalRequestHandler = tests_Polymorphics_GenericAnimalRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<string> HandleCore(
+            global::Tests.Polymorphics.AnimalRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Polymorphics_GenericAnimalRequestHandler = _tests_Polymorphics_GenericAnimalRequestHandler;
+
+            return
+                /* Request Handler */ tests_Polymorphics_GenericAnimalRequestHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.AnimalRequest, string>.Handle(
             global::Tests.Polymorphics.AnimalRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Polymorphics_AnimalRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.AnimalRequest, string>.Handle(
             global::Tests.Polymorphics.AnimalRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_Polymorphics_AnimalRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<string>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_Polymorphics_CarRequest :
         global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.CarRequest, double>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.CarRequest, double>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Polymorphics.CarRequestHandler _tests_Polymorphics_CarRequestHandler;
 
-        public PipelinedHandler_Tests_Polymorphics_CarRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Polymorphics_CarRequest(global::Tests.Polymorphics.CarRequestHandler tests_Polymorphics_CarRequestHandler)
+        {
+            _tests_Polymorphics_CarRequestHandler = tests_Polymorphics_CarRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<double> HandleCore(
+            global::Tests.Polymorphics.CarRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Polymorphics_CarRequestHandler = _tests_Polymorphics_CarRequestHandler;
+
+            return
+                /* Request Handler */ tests_Polymorphics_CarRequestHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<double> global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.CarRequest, double>.Handle(
             global::Tests.Polymorphics.CarRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Polymorphics_CarRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<double> global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.CarRequest, double>.Handle(
             global::Tests.Polymorphics.CarRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<double>(_mediator.Handle_Tests_Polymorphics_CarRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<double>(HandleCore(request, cancellationToken));
     }
 
     public sealed class PipelinedHandler_Tests_Polymorphics_VehicleRequest :
         global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.VehicleRequest, double>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.VehicleRequest, double>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Polymorphics.VehicleRequestHandler _tests_Polymorphics_VehicleRequestHandler;
 
-        public PipelinedHandler_Tests_Polymorphics_VehicleRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Polymorphics_VehicleRequest(global::Tests.Polymorphics.VehicleRequestHandler tests_Polymorphics_VehicleRequestHandler)
+        {
+            _tests_Polymorphics_VehicleRequestHandler = tests_Polymorphics_VehicleRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<double> HandleCore(
+            global::Tests.Polymorphics.VehicleRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Polymorphics_VehicleRequestHandler = _tests_Polymorphics_VehicleRequestHandler;
+
+            return
+                /* Request Handler */ tests_Polymorphics_VehicleRequestHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<double> global::Mediator.Switch.IRequestHandler<global::Tests.Polymorphics.VehicleRequest, double>.Handle(
             global::Tests.Polymorphics.VehicleRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Polymorphics_VehicleRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<double> global::Mediator.Switch.IValueRequestHandler<global::Tests.Polymorphics.VehicleRequest, double>.Handle(
             global::Tests.Polymorphics.VehicleRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<double>(_mediator.Handle_Tests_Polymorphics_VehicleRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<double>(HandleCore(request, cancellationToken));
     }
 
     #endregion

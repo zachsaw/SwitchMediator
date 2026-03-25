@@ -7,7 +7,8 @@ public static class BehaviorChainBuilder
 {
     public static string BuildRequest(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> behaviors,
         string requestName,
-        string coreHandler)
+        string coreHandler,
+        string continuationIndent = "            ")
     {
         var chain = $"/* Request Handler */ {coreHandler}";
         return behaviors.Any()
@@ -15,7 +16,7 @@ public static class BehaviorChainBuilder
                 .Aggregate(
                     seed: chain,
                     func: (innerChain, behavior) =>
-                        $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, ct =>\n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)"
+                        $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, ct =>\n{continuationIndent}{innerChain.Replace("cancellationToken", "ct")},\n{continuationIndent}cancellationToken)"
                 )
             : chain;
     }

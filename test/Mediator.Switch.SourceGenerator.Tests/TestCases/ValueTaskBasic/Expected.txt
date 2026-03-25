@@ -218,17 +218,30 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.ValueTaskBasic.Ping, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.ValueTaskBasic.Ping, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.ValueTaskBasic.PingHandler _tests_ValueTaskBasic_PingHandler;
 
-        public PipelinedHandler_Tests_ValueTaskBasic_Ping(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_ValueTaskBasic_Ping(global::Tests.ValueTaskBasic.PingHandler tests_ValueTaskBasic_PingHandler)
+        {
+            _tests_ValueTaskBasic_PingHandler = tests_ValueTaskBasic_PingHandler;
+        }
+
+        private global::System.Threading.Tasks.ValueTask<string> HandleCore(
+            global::Tests.ValueTaskBasic.Ping request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_ValueTaskBasic_PingHandler = _tests_ValueTaskBasic_PingHandler;
+
+            return
+                /* Request Handler */ tests_ValueTaskBasic_PingHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.ValueTaskBasic.Ping, string>.Handle(
             global::Tests.ValueTaskBasic.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_ValueTaskBasic_Ping(request, cancellationToken).AsTask();
+            => HandleCore(request, cancellationToken).AsTask();
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.ValueTaskBasic.Ping, string>.Handle(
             global::Tests.ValueTaskBasic.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_ValueTaskBasic_Ping(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
     }
 
     #endregion

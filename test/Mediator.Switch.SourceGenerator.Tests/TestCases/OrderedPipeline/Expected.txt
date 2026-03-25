@@ -232,17 +232,45 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.OrderedPipeline.CalculationRequest, int>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.OrderedPipeline.CalculationRequest, int>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.OrderedPipeline.MonitoringBehavior<global::Tests.OrderedPipeline.CalculationRequest, int> _tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest;
+        private readonly global::Tests.OrderedPipeline.ValidationBehavior<global::Tests.OrderedPipeline.CalculationRequest, int> _tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest;
+        private readonly global::Tests.OrderedPipeline.LoggingBehavior<global::Tests.OrderedPipeline.CalculationRequest, int> _tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest;
+        private readonly global::Tests.OrderedPipeline.CalculationRequestHandler _tests_OrderedPipeline_CalculationRequestHandler;
 
-        public PipelinedHandler_Tests_OrderedPipeline_CalculationRequest(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_OrderedPipeline_CalculationRequest(global::Tests.OrderedPipeline.MonitoringBehavior<global::Tests.OrderedPipeline.CalculationRequest, int> tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest, global::Tests.OrderedPipeline.ValidationBehavior<global::Tests.OrderedPipeline.CalculationRequest, int> tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest, global::Tests.OrderedPipeline.LoggingBehavior<global::Tests.OrderedPipeline.CalculationRequest, int> tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest, global::Tests.OrderedPipeline.CalculationRequestHandler tests_OrderedPipeline_CalculationRequestHandler)
+        {
+            _tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest = tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest;
+            _tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest = tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest;
+            _tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest = tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest;
+            _tests_OrderedPipeline_CalculationRequestHandler = tests_OrderedPipeline_CalculationRequestHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<int> HandleCore(
+            global::Tests.OrderedPipeline.CalculationRequest request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest = _tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest;
+            var tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest = _tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest;
+            var tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest = _tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest;
+            var tests_OrderedPipeline_CalculationRequestHandler = _tests_OrderedPipeline_CalculationRequestHandler;
+
+            return
+                tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
+                tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
+                tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
+                /* Request Handler */ tests_OrderedPipeline_CalculationRequestHandler.Handle(request, ct),
+                ct),
+                ct),
+                cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<int> global::Mediator.Switch.IRequestHandler<global::Tests.OrderedPipeline.CalculationRequest, int>.Handle(
             global::Tests.OrderedPipeline.CalculationRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_OrderedPipeline_CalculationRequest(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<int> global::Mediator.Switch.IValueRequestHandler<global::Tests.OrderedPipeline.CalculationRequest, int>.Handle(
             global::Tests.OrderedPipeline.CalculationRequest request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<int>(_mediator.Handle_Tests_OrderedPipeline_CalculationRequest(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<int>(HandleCore(request, cancellationToken));
     }
 
     #endregion

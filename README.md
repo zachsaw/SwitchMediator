@@ -22,8 +22,6 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
-* [What's New in V3.1](#whats-new-in-v31)
-* [What's New in V3](#whats-new-in-v3)
 * [What's New in V3.2](#whats-new-in-v32)
 * [What's New in V3.1](#whats-new-in-v31)
 * [What's New in V3](#whats-new-in-v3)
@@ -80,7 +78,7 @@ Both `IRequestHandler<TRequest,TResponse>` and `IValueRequestHandler<TRequest,TR
 
 #### How It Works
 
-The source generator emits a **sealed inner class** `PipelinedHandler_<RequestName>` inside your mediator partial class. The wrapper holds a reference to the mediator and delegates directly to the private `Handle_XXX` method — the same method called by `ISender.Send`. This guarantees the full behavior chain is applied.
+The source generator emits a **sealed inner class** `PipelinedHandler_<RequestName>` inside your mediator partial class. The wrapper holds direct references to each applicable behavior and the raw handler — **no reference to the mediator is needed**. Its constructor takes all of these as DI-injectable parameters. The full pipeline chain is inlined directly in a private `HandleCore` method, making every step step-through debuggable without needing to enter `ISender.Send`.
 
 ```csharp
 // Generated (simplified):
@@ -88,16 +86,43 @@ public sealed class PipelinedHandler_GetUserRequest :
         IRequestHandler<GetUserRequest, User>,
         IValueRequestHandler<GetUserRequest, User>
 {
-    private readonly AppMediator _mediator;
-    public PipelinedHandler_GetUserRequest(AppMediator mediator) => _mediator = mediator;
+    private readonly LoggingBehavior<GetUserRequest, User> _loggingBehavior;
+    private readonly ValidationBehavior<GetUserRequest, User> _validationBehavior;
+    private readonly GetUserRequestHandler _handler;
+
+    public PipelinedHandler_GetUserRequest(
+        LoggingBehavior<GetUserRequest, User> loggingBehavior,
+        ValidationBehavior<GetUserRequest, User> validationBehavior,
+        GetUserRequestHandler handler)
+    {
+        _loggingBehavior = loggingBehavior;
+        _validationBehavior = validationBehavior;
+        _handler = handler;
+    }
+
+    private Task<User> HandleCore(GetUserRequest request, CancellationToken cancellationToken)
+    {
+        var loggingBehavior = _loggingBehavior;
+        var validationBehavior = _validationBehavior;
+        var handler = _handler;
+
+        return
+            loggingBehavior.Handle(request, ct =>
+            validationBehavior.Handle(request, ct =>
+            /* Request Handler */ handler.Handle(request, ct),
+            ct),
+            cancellationToken);
+    }
 
     Task<User> IRequestHandler<GetUserRequest, User>.Handle(GetUserRequest req, CancellationToken ct)
-        => _mediator.Handle_GetUserRequest(req, ct); // runs full pipeline
+        => HandleCore(req, ct);
 
     ValueTask<User> IValueRequestHandler<GetUserRequest, User>.Handle(GetUserRequest req, CancellationToken ct)
-        => new(_mediator.Handle_GetUserRequest(req, ct));
+        => new(HandleCore(req, ct));
 }
 ```
+
+Because the chain is inlined in `HandleCore`, you can step through every behavior and the handler in your debugger without passing through `ISender` or any mediator dispatch at all.
 
 #### Known Constraints and Incompatibilities
 
@@ -107,7 +132,6 @@ public sealed class PipelinedHandler_GetUserRequest :
 | **Task ↔ ValueTask adaptation** | `IRequestHandler<T,R>` always returns `Task<TResponse>`. For ValueTask-based handlers the result is wrapped via `.AsTask()`. Similarly, `IValueRequestHandler<T,R>` always returns `ValueTask<TResponse>`, wrapping Task-based results in `new ValueTask<T>(...)`. |
 | **Pipeline type must match the handler** | If you have `IValueRequestHandler` handlers you must use `IValuePipelineBehavior` behaviors (not `IPipelineBehavior`). The SMD002 analyzer enforces this at compile time. This constraint is independent of whether you enable pipelined injection. |
 | **No mixed pipelines** | You cannot have both `IPipelineBehavior` and `IValuePipelineBehavior` behaviors applicable to the same request type. This is an existing restriction enforced by SMD002. |
-| **Constructor injects concrete mediator** | The generated wrapper takes the concrete mediator type (e.g., `AppMediator`) as its constructor argument. The DI registration casts the resolved `IMediator` to `AppMediator` using `Activator.CreateInstance`. This is safe as long as the concrete type is correctly registered. |
 | **SMD002 analyzer update** | The `PipelineConsistencyAnalyzer` (SMD002) has been updated to skip types from auto-generated files (`.g.cs`). This prevents false-positive errors that previously fired when the generated wrapper classes (which implement both `IRequestHandler` and `IValueRequestHandler`) were analyzed alongside user-defined Task-based behaviors. |
 
  ---

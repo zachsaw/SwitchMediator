@@ -219,17 +219,30 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Mediator.Switch.IRequestHandler<global::Tests.Basic.Ping, string>,
         global::Mediator.Switch.IValueRequestHandler<global::Tests.Basic.Ping, string>
     {
-        private readonly TestMediator _mediator;
+        private readonly global::Tests.Basic.PingHandler _tests_Basic_PingHandler;
 
-        public PipelinedHandler_Tests_Basic_Ping(TestMediator mediator) => _mediator = mediator;
+        public PipelinedHandler_Tests_Basic_Ping(global::Tests.Basic.PingHandler tests_Basic_PingHandler)
+        {
+            _tests_Basic_PingHandler = tests_Basic_PingHandler;
+        }
+
+        private global::System.Threading.Tasks.Task<string> HandleCore(
+            global::Tests.Basic.Ping request,
+            global::System.Threading.CancellationToken cancellationToken)
+        {
+            var tests_Basic_PingHandler = _tests_Basic_PingHandler;
+
+            return
+                /* Request Handler */ tests_Basic_PingHandler.Handle(request, cancellationToken);
+        }
 
         global::System.Threading.Tasks.Task<string> global::Mediator.Switch.IRequestHandler<global::Tests.Basic.Ping, string>.Handle(
             global::Tests.Basic.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => _mediator.Handle_Tests_Basic_Ping(request, cancellationToken);
+            => HandleCore(request, cancellationToken);
 
         global::System.Threading.Tasks.ValueTask<string> global::Mediator.Switch.IValueRequestHandler<global::Tests.Basic.Ping, string>.Handle(
             global::Tests.Basic.Ping request, global::System.Threading.CancellationToken cancellationToken)
-            => new global::System.Threading.Tasks.ValueTask<string>(_mediator.Handle_Tests_Basic_Ping(request, cancellationToken));
+            => new global::System.Threading.Tasks.ValueTask<string>(HandleCore(request, cancellationToken));
     }
 
     #endregion
