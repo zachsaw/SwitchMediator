@@ -36,6 +36,15 @@ public interface ISilentFailureNotification : INotification;
 // Marker for notifications that should be retried on failure
 public interface IRetryableNotification : INotification;
 
+public interface IErrorResultFactory<TSelf>
+    where TSelf : struct, IErrorResultFactory<TSelf>
+{
+    static abstract TSelf CreateFromError(string error);
+}
+
+public interface IOneOfRequest<TResponse> : IRequest<TResponse>
+    where TResponse : struct, IErrorResultFactory<TResponse>;
+
 
 // --- Requests ---
 
@@ -77,6 +86,9 @@ public record Cat : Animal
 [RequestHandler(typeof(FastStatusCheckHandler))]
 public class FastStatusCheckRequest : IRequest<bool>;
 
+[RequestHandler(typeof(DeleteMenuItemCommandHandler))]
+public sealed record DeleteMenuItemCommand(int MenuItemId, bool SimulateFailure = false) : IOneOfRequest<MenuOperationResult>;
+
 
 // --- Notifications ---
 
@@ -112,6 +124,15 @@ public class User : IVersionedResponse
     public int UserId { get; set; }
     public string Description { get; set; } = "";
     public int Version { get; set; }
+}
+
+public readonly record struct MenuOperationResult(bool IsError, string Message) : IErrorResultFactory<MenuOperationResult>
+{
+    public static MenuOperationResult Success(string message) => new(false, message);
+
+    public static MenuOperationResult CreateFromError(string error) => new(true, error);
+
+    public override string ToString() => IsError ? $"Error: {Message}" : $"Success: {Message}";
 }
 
 
@@ -154,6 +175,19 @@ public class FastStatusCheckHandler : IValueRequestHandler<FastStatusCheckReques
 {
     public ValueTask<bool> Handle(FastStatusCheckRequest request, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(true);
+}
+
+public class DeleteMenuItemCommandHandler : IValueRequestHandler<DeleteMenuItemCommand, MenuOperationResult>
+{
+    public ValueTask<MenuOperationResult> Handle(DeleteMenuItemCommand request, CancellationToken cancellationToken = default)
+    {
+        if (request.SimulateFailure)
+        {
+            throw new InvalidOperationException($"Menu item {request.MenuItemId} could not be deleted because it is still in use.");
+        }
+
+        return ValueTask.FromResult(MenuOperationResult.Success($"Deleted menu item {request.MenuItemId}."));
+    }
 }
 
 
@@ -324,6 +358,25 @@ public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         var response = await next(cancellationToken);
         Console.WriteLine($"Transaction: Completed with ID {request.TransactionId}");
         return response;
+    }
+}
+
+[PipelineBehaviorOrder(1)]
+public class RecoverableValueBehavior<TRequest, TResponse> : IValuePipelineBehavior<TRequest, TResponse>
+    where TRequest : class, IOneOfRequest<TResponse>
+    where TResponse : struct, IErrorResultFactory<TResponse>
+{
+    public async ValueTask<TResponse> Handle(TRequest request, ValueRequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await next(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"RecoverableValueBehavior: Converted {typeof(TRequest).Name} failure into an error result.");
+            return TResponse.CreateFromError(ex.Message);
+        }
     }
 }
 

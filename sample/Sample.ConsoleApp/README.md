@@ -60,6 +60,41 @@ This sample application demonstrates various technical capabilities of the **Swi
 
     > **Design Note:** When using `IValueRequestHandler`, all applicable pipeline behaviors for that request must implement `IValuePipelineBehavior` (not `IPipelineBehavior`). The **SMD002** analyzer enforces this at compile time. A clean way to separate pipelines is via marker interfaces (e.g., `IValidatable`) that constrain which behaviors apply to which requests.
 
+*   **Self-Referential Value Pipeline Constraints:** Demonstrates a OneOf-style ValueTask pipeline where the request and the behavior both constrain the response using a self-referential generic constraint such as `where TResponse : struct, IErrorResultFactory<TResponse>`.
+
+    ```csharp
+    public interface IErrorResultFactory<TSelf>
+        where TSelf : struct, IErrorResultFactory<TSelf>
+    {
+        static abstract TSelf CreateFromError(string error);
+    }
+
+    public interface IOneOfRequest<TResponse> : IRequest<TResponse>
+        where TResponse : struct, IErrorResultFactory<TResponse>;
+
+    public class RecoverableValueBehavior<TRequest, TResponse> : IValuePipelineBehavior<TRequest, TResponse>
+        where TRequest : class, IOneOfRequest<TResponse>
+        where TResponse : struct, IErrorResultFactory<TResponse>
+    {
+        public async ValueTask<TResponse> Handle(
+            TRequest request,
+            ValueRequestHandlerDelegate<TResponse> next,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await next(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                return TResponse.CreateFromError(ex.Message);
+            }
+        }
+    }
+    ```
+
+    The sample sends `DeleteMenuItemCommand` twice: once successfully, and once with `SimulateFailure = true`, showing that the generated mediator correctly applies the behavior even though the response constraint refers back to `TResponse`.
+
 *   **Handler Discovery via Attribute:** Uses the `[RequestHandler]` attribute on request types to link them to their specific handler implementation, allowing easy navigation within the IDE. This attribute now also accepts `IValueRequestHandler` handlers.
 
     ```csharp

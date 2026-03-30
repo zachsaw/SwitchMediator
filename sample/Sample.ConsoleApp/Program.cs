@@ -74,6 +74,14 @@ public static class Program
         var statusResult = await valueSender.Send(new FastStatusCheckRequest());
         Console.WriteLine($"--> Status: {(statusResult ? "OK" : "FAIL")}\n");
 
+        Console.WriteLine("--- Sending DeleteMenuItemCommand via IValueSender (self-referential constraint demo) ---");
+        var deleteMenuItemResult = await valueSender.Send(new DeleteMenuItemCommand(7));
+        Console.WriteLine($"--> Result: {deleteMenuItemResult}\n");
+
+        Console.WriteLine("--- Sending DeleteMenuItemCommand with simulated failure ---");
+        var failedDeleteMenuItemResult = await valueSender.Send(new DeleteMenuItemCommand(7, SimulateFailure: true));
+        Console.WriteLine($"--> Result: {failedDeleteMenuItemResult}\n");
+
         Console.WriteLine("--- Publishing ServerStartedEvent via IValuePublisher (zero-allocation dispatch) ---");
         await valuePublisher.Publish(new ServerStartedEvent());
         Console.WriteLine("--- ServerStartedEvent Published ---\n");

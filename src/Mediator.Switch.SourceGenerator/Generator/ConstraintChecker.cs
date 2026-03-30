@@ -6,7 +6,11 @@ namespace Mediator.Switch.SourceGenerator.Generator;
 
 public static class ConstraintChecker
 {
-    public static bool IsConstraintSatisfied(Compilation compilation, ITypeParameterSymbol? param, ITypeSymbol typeSymbol)
+    public static bool IsConstraintSatisfied(
+        Compilation compilation,
+        ITypeParameterSymbol? param,
+        ITypeSymbol typeSymbol,
+        IReadOnlyDictionary<ITypeParameterSymbol, ITypeSymbol>? substitutions = null)
     {
         if (param == null) return true; // No constraints
 
@@ -86,14 +90,17 @@ public static class ConstraintChecker
         // 6. Check Type constraints (Base class and Interfaces)
         foreach (var constraintType in param.ConstraintTypes)
         {
+            var substitutedConstraintType = SubstituteTypeParameters(constraintType, substitutions);
+
             // Use compilation.ClassifyConversion for a more robust check than HasImplicitConversion
-            var conversion = compilation.ClassifyConversion(typeSymbol, constraintType);
+            var conversion = compilation.ClassifyConversion(typeSymbol, substitutedConstraintType);
             // Needs an identity, implicit reference, boxing, or implicit nullable conversion.
             // Unboxing/explicit reference conversions usually don't satisfy generic constraints.
             if (conversion is {IsIdentity: false, IsImplicit: false}) // Includes implicit reference, boxing, nullable value type to base type etc.
             {
                  // Add specific check for interface implementation if conversion fails (e.g., value type implementing interface)
-                 if (!(constraintType.TypeKind == TypeKind.Interface && typeSymbol.AllInterfaces.Contains(constraintType, SymbolEqualityComparer.Default)))
+                 if (!(substitutedConstraintType.TypeKind == TypeKind.Interface &&
+                       typeSymbol.AllInterfaces.Contains(substitutedConstraintType, SymbolEqualityComparer.Default)))
                  {
                     return false;
                  }
@@ -102,5 +109,45 @@ public static class ConstraintChecker
 
         // If we passed all checks, the constraints are satisfied
         return true;
+    }
+
+    private static ITypeSymbol SubstituteTypeParameters(
+        ITypeSymbol constraintType,
+        IReadOnlyDictionary<ITypeParameterSymbol, ITypeSymbol>? substitutions)
+    {
+        if (substitutions == null || substitutions.Count == 0)
+        {
+            return constraintType;
+        }
+
+        if (constraintType is ITypeParameterSymbol typeParameter &&
+            substitutions.TryGetValue(typeParameter, out var replacement))
+        {
+            return replacement;
+        }
+
+        if (constraintType is not INamedTypeSymbol { IsGenericType: true } namedType)
+        {
+            return constraintType;
+        }
+
+        var substitutedTypeArguments = new ITypeSymbol[namedType.TypeArguments.Length];
+        var changed = false;
+
+        for (var i = 0; i < namedType.TypeArguments.Length; i++)
+        {
+            var originalTypeArgument = namedType.TypeArguments[i];
+            var substitutedTypeArgument = SubstituteTypeParameters(originalTypeArgument, substitutions);
+            substitutedTypeArguments[i] = substitutedTypeArgument;
+
+            if (!SymbolEqualityComparer.Default.Equals(originalTypeArgument, substitutedTypeArgument))
+            {
+                changed = true;
+            }
+        }
+
+        return changed
+            ? namedType.OriginalDefinition.Construct(substitutedTypeArguments)
+            : constraintType;
     }
 }
