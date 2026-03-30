@@ -22,6 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
+* [What's New in V3.2](#whats-new-in-v32)
 * [What's New in V3.1](#whats-new-in-v31)
 * [What's New in V3](#whats-new-in-v3)
 * [What's New in V2](#whats-new-in-v2)
@@ -32,6 +33,15 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [Installation](#installation)
 * [Usage Example](#usage-example)
 * [License](#license)
+
+ ---
+
+## What's New in V3.2
+
+### Self-Referential Pipeline Constraints
+V3.2 fixes behavior applicability checks for self-referential generic constraints in request/value-request pipelines. This primarily affects advanced patterns where a request or behavior constrains `TResponse` using the same type parameter recursively, for example `where TResponse : struct, IErrorResultFactory<TResponse>`.
+
+If you're using ValueTask-based pipelines with error-result factories, OneOf-style responses, or similar static-abstract factory patterns, the generated mediator now applies matching pipeline behaviors correctly.
 
  ---
 
@@ -157,11 +167,6 @@ var valueSender = sp.GetRequiredService<IValueSender>(); // ValueTask-based (zer
  ---
 
 ## What's New in V3
-
-### New in V3.2: Self-Referential Pipeline Constraints
-V3.2 fixes behavior applicability checks for self-referential generic constraints in request/value-request pipelines. This primarily affects advanced patterns where a request or behavior constrains `TResponse` using the same type parameter recursively, for example `where TResponse : struct, IErrorResultFactory<TResponse>`.
-
-If you're using ValueTask-based pipelines with error-result factories, OneOf-style responses, or similar static-abstract factory patterns, the generated mediator now applies matching pipeline behaviors correctly.
 
 ### ⚠️ Breaking Change: User-Defined Partial Class
 In previous versions, the library automatically generated a class named `SwitchMediator`. In V3, **you must define the mediator class yourself** as a `partial class` and mark it with the `[SwitchMediator]` attribute.
