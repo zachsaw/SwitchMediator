@@ -28,6 +28,7 @@ public class SwitchMediatorBaselineUpdateTests(ITestOutputHelper output)
     [InlineData("BasicPipelineNestedType")]
     [InlineData("BasicPipelineAdapted")]
     [InlineData("ConstrainedPipeline")]
+    [InlineData("SelfReferentialResponseConstraint")]
     [InlineData("OrderedPipeline")]
     [InlineData("FullPipeline")]
     [InlineData("NoMessages")]
