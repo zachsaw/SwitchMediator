@@ -41,7 +41,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 ### Self-Referential Pipeline Constraints
 V3.2 fixes behavior applicability checks for self-referential generic constraints in request/value-request pipelines. This primarily affects advanced patterns where a request or behavior constrains `TResponse` using the same type parameter recursively, for example `where TResponse : struct, IErrorResultFactory<TResponse>`.
 
-If you're using ValueTask-based pipelines with error-result factories, OneOf-style responses, or similar static-abstract factory patterns, the generated mediator now applies matching pipeline behaviors correctly.
+Both Task-based and ValueTask-based pipelines are supported here. In V3.2, the generated mediator now applies matching pipeline behaviors correctly for self-referential constraint patterns such as error-result factories, OneOf-style responses, and similar static-abstract factory shapes.
 
  ---
 
