@@ -102,6 +102,48 @@ public class ValidationValueBehavior<TRequest, TResponse> : IValuePipelineBehavi
 
 **How the analyzer works:** The analyzer checks each behavior's generic constraints against handler types. A behavior only applies if the request type satisfies all of its constraints (e.g., `where TRequest : notnull, IValidatable`). This allows you to selectively apply behaviors to specific request types while avoiding cross-pipeline contamination.
 
+**Self-referential generic constraints are supported too.** This matters for ValueTask-based pipelines that model OneOf/Result-style responses using constraints like `where TResponse : struct, IErrorResultFactory<TResponse>`. SwitchMediator now correctly recognizes those behaviors as applicable when the request constraint flows the same response type through the pipeline.
+
+```csharp
+public interface IErrorResultFactory<TSelf>
+    where TSelf : struct, IErrorResultFactory<TSelf>
+{
+    static abstract TSelf CreateFromError(string error);
+}
+
+public interface IOneOfRequest<TResponse> : IRequest<TResponse>
+    where TResponse : struct, IErrorResultFactory<TResponse>;
+
+public sealed class DeleteMenuItemCommand : IOneOfRequest<MenuOperationResult> { }
+
+public readonly struct MenuOperationResult : IErrorResultFactory<MenuOperationResult>
+{
+    public static MenuOperationResult CreateFromError(string error) => new(isError: true);
+}
+
+public sealed class RecoverableValueBehavior<TRequest, TResponse> : IValuePipelineBehavior<TRequest, TResponse>
+    where TRequest : class, IOneOfRequest<TResponse>
+    where TResponse : struct, IErrorResultFactory<TResponse>
+{
+    public async ValueTask<TResponse> Handle(
+        TRequest request,
+        ValueRequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await next(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return TResponse.CreateFromError(ex.Message);
+        }
+    }
+}
+```
+
+This is included in `sample/Sample.ConsoleApp` so you can see both the successful path and the fallback error-result path in a working example.
+
 ### DI Registration
 
 `AddMediator<T>()` automatically registers `IValueMediator`, `IValueSender`, and `IValuePublisher` alongside the existing `IMediator`, `ISender`, and `IPublisher`. No extra configuration needed.
@@ -115,6 +157,11 @@ var valueSender = sp.GetRequiredService<IValueSender>(); // ValueTask-based (zer
  ---
 
 ## What's New in V3
+
+### New in V3.2: Self-Referential Pipeline Constraints
+V3.2 fixes behavior applicability checks for self-referential generic constraints in request/value-request pipelines. This primarily affects advanced patterns where a request or behavior constrains `TResponse` using the same type parameter recursively, for example `where TResponse : struct, IErrorResultFactory<TResponse>`.
+
+If you're using ValueTask-based pipelines with error-result factories, OneOf-style responses, or similar static-abstract factory patterns, the generated mediator now applies matching pipeline behaviors correctly.
 
 ### ⚠️ Breaking Change: User-Defined Partial Class
 In previous versions, the library automatically generated a class named `SwitchMediator`. In V3, **you must define the mediator class yourself** as a `partial class` and mark it with the `[SwitchMediator]` attribute.
