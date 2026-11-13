@@ -47,8 +47,8 @@ public static class ServiceCollectionExtensions
         if (typeof(IValueMediator).IsAssignableFrom(typeof(TSwitchMediator)))
         {
             services.Add(new ServiceDescriptor(typeof(IValueMediator), sp => (IValueMediator)sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
-            services.Add(new ServiceDescriptor(typeof(IValueSender), sp => sp.GetRequiredService<IValueMediator>(), options.ServiceLifetime));
-            services.Add(new ServiceDescriptor(typeof(IValuePublisher), sp => sp.GetRequiredService<IValueMediator>(), options.ServiceLifetime));
+            services.Add(new ServiceDescriptor(typeof(IValueSender), sp => (IValueSender)sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
+            services.Add(new ServiceDescriptor(typeof(IValuePublisher), sp => (IValuePublisher)sp.GetRequiredService<IMediator>(), options.ServiceLifetime));
         }
 
         if (options.KnownTypes != default)
