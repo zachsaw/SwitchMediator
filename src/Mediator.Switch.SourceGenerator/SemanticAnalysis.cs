@@ -14,5 +14,6 @@ public record SemanticAnalysis(
     List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> NotificationHandlers,
     List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> NotificationBehaviors,
     List<ITypeSymbol> Notifications,
-    HandlerCacheMode HandlerCacheMode = HandlerCacheMode.LazyDictionary
+    HandlerCacheMode HandlerCacheMode = HandlerCacheMode.LazyDictionary,
+    MediatorServiceProviderMode ServiceProviderMode = MediatorServiceProviderMode.Abstraction
 );

@@ -68,6 +68,22 @@ The trade-off is deliberate: the dictionary makes the resolution ~70% faster and
 
 No source changes are needed to upgrade. If you want the previous allocation profile back, set `HandlerCache = HandlerCache.Fields`.
 
+### Direct service provider (opt-in)
+
+The generated mediator takes `ISwitchMediatorServiceProvider` by default, which is container agnostic but costs an extra scoped service and an allocation per scope. With Microsoft.Extensions.DependencyInjection you can pass the scope's `IServiceProvider` directly instead:
+
+```csharp
+[SwitchMediator(ServiceProvider = MediatorServiceProvider.Direct)]
+public partial class AppMediator;
+```
+
+| `ServiceProvider` (with `LazyDictionary`) | `CreateScope` + resolve | Allocated |
+| :--- | ---: | ---: |
+| `Abstraction` (default) | 171.6 ns | 728 B |
+| **`Direct`** | **129.9 ns** | **344 B** |
+
+This only changes the constructor signature of the generated class; nothing else in the pipeline is affected. It is opt-in because it removes `ISwitchMediatorServiceProvider` from the resolution graph, which non-Microsoft containers rely on.
+
  ---
 
 ## What's New in V3.2
