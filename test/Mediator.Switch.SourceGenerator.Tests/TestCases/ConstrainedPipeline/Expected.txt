@@ -29,11 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.ConstrainedPipeline.SpecialProcessRequestHandler? _tests_ConstrainedPipeline_SpecialProcessRequestHandler;
-    private global::Tests.ConstrainedPipeline.NormalRequestHandler? _tests_ConstrainedPipeline_NormalRequestHandler;
-    private global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>? _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
-    private global::Tests.ConstrainedPipeline.SpecialProcessingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>? _tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest;
-    private global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.NormalRequest, int>? _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -183,9 +179,9 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.ConstrainedPipeline.SpecialProcessRequest request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = Get(ref _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest);
-        var tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = Get(ref _tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest);
-        var tests_ConstrainedPipeline_SpecialProcessRequestHandler = Get(ref _tests_ConstrainedPipeline_SpecialProcessRequestHandler);
+        var tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = Get<global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>>();
+        var tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest = Get<global::Tests.ConstrainedPipeline.SpecialProcessingBehavior<global::Tests.ConstrainedPipeline.SpecialProcessRequest, global::System.Guid>>();
+        var tests_ConstrainedPipeline_SpecialProcessRequestHandler = Get<global::Tests.ConstrainedPipeline.SpecialProcessRequestHandler>();
 
         return
             tests_ConstrainedPipeline_SpecialProcessingBehavior__tests_ConstrainedPipeline_SpecialProcessRequest.Handle(request, ct =>
@@ -199,8 +195,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.ConstrainedPipeline.NormalRequest request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest = Get(ref _tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest);
-        var tests_ConstrainedPipeline_NormalRequestHandler = Get(ref _tests_ConstrainedPipeline_NormalRequestHandler);
+        var tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest = Get<global::Tests.ConstrainedPipeline.GenericLoggingBehavior<global::Tests.ConstrainedPipeline.NormalRequest, int>>();
+        var tests_ConstrainedPipeline_NormalRequestHandler = Get<global::Tests.ConstrainedPipeline.NormalRequestHandler>();
 
         return
             tests_ConstrainedPipeline_GenericLoggingBehavior__tests_ConstrainedPipeline_NormalRequest.Handle(request, ct =>
@@ -210,9 +206,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

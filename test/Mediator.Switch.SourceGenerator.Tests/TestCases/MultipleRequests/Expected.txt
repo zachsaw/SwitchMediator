@@ -29,8 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.MultipleRequests.GetProductRequestHandler? _tests_MultipleRequests_GetProductRequestHandler;
-    private global::Tests.MultipleRequests.GetInventoryRequestHandler? _tests_MultipleRequests_GetInventoryRequestHandler;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -181,7 +180,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_MultipleRequests_GetProductRequestHandler = Get(ref _tests_MultipleRequests_GetProductRequestHandler);
+        var tests_MultipleRequests_GetProductRequestHandler = Get<global::Tests.MultipleRequests.GetProductRequestHandler>();
 
         return
             /* Request Handler */ tests_MultipleRequests_GetProductRequestHandler.Handle(request, cancellationToken);
@@ -192,7 +191,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_MultipleRequests_GetInventoryRequestHandler = Get(ref _tests_MultipleRequests_GetInventoryRequestHandler);
+        var tests_MultipleRequests_GetInventoryRequestHandler = Get<global::Tests.MultipleRequests.GetInventoryRequestHandler>();
 
         return
             /* Request Handler */ tests_MultipleRequests_GetInventoryRequestHandler.Handle(request, cancellationToken);
@@ -200,9 +199,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

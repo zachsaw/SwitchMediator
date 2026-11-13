@@ -38,6 +38,9 @@ public class SwitchMediatorBaselineUpdateTests(ITestOutputHelper output)
     [InlineData("ReferencesSender")]
     [InlineData("ReferencesPublisher")]
     [InlineData("ValueTaskBasic")]
+    [InlineData("HandlerCacheFields")]
+    [InlineData("HandlerCacheDictionary")]
+    [InlineData("HandlerCacheNone")]
     public async Task UpdateExpectedOutputFile(string testCase)
     {
         await InitializeReferencesAsync(output); // Ensure references are ready

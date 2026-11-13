@@ -29,8 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.BasicPipeline.PingHandler? _tests_BasicPipeline_PingHandler;
-    private global::Tests.BasicPipeline.GenericBehavior<global::Tests.BasicPipeline.Ping, string>? _tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -169,8 +168,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.BasicPipeline.Ping request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping = Get(ref _tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping);
-        var tests_BasicPipeline_PingHandler = Get(ref _tests_BasicPipeline_PingHandler);
+        var tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping = Get<global::Tests.BasicPipeline.GenericBehavior<global::Tests.BasicPipeline.Ping, string>>();
+        var tests_BasicPipeline_PingHandler = Get<global::Tests.BasicPipeline.PingHandler>();
 
         return
             tests_BasicPipeline_GenericBehavior__tests_BasicPipeline_Ping.Handle(request, ct =>
@@ -180,9 +179,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

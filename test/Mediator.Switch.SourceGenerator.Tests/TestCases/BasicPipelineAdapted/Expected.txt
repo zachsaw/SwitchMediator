@@ -29,9 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.BasicPipelineAdapted.PingHandler? _tests_BasicPipelineAdapted_PingHandler;
-    private global::Tests.BasicPipelineAdapted.PongHandler? _tests_BasicPipelineAdapted_PongHandler;
-    private global::Tests.BasicPipelineAdapted.GenericBehavior<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.VersionedResponse>? _tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -181,8 +179,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.BasicPipelineAdapted.Ping request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping = Get(ref _tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping);
-        var tests_BasicPipelineAdapted_PingHandler = Get(ref _tests_BasicPipelineAdapted_PingHandler);
+        var tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping = Get<global::Tests.BasicPipelineAdapted.GenericBehavior<global::Tests.BasicPipelineAdapted.Ping, global::Tests.BasicPipelineAdapted.VersionedResponse>>();
+        var tests_BasicPipelineAdapted_PingHandler = Get<global::Tests.BasicPipelineAdapted.PingHandler>();
 
         return
             tests_BasicPipelineAdapted_GenericBehavior__tests_BasicPipelineAdapted_Ping.Handle(request, ct =>
@@ -195,7 +193,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_BasicPipelineAdapted_PongHandler = Get(ref _tests_BasicPipelineAdapted_PongHandler);
+        var tests_BasicPipelineAdapted_PongHandler = Get<global::Tests.BasicPipelineAdapted.PongHandler>();
 
         return
             /* Request Handler */ tests_BasicPipelineAdapted_PongHandler.Handle(request, cancellationToken);
@@ -203,9 +201,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

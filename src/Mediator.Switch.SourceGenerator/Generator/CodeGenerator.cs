@@ -29,6 +29,60 @@ public static class CodeGenerator
         var notificationHandlers = analysis.NotificationHandlers;
         var notifications = analysis.Notifications;
         var notificationBehaviors = analysis.NotificationBehaviors;
+        var cacheMode = analysis.HandlerCacheMode;
+        var useFields = cacheMode == HandlerCacheMode.Fields;
+
+        // The cache accessor emitted into the mediator, one flavour per HandlerCache mode.
+        // Continuation lines are padded by one member level because the block is interpolated
+        // after the template's own indentation, which only applies to its first line.
+        var cacheAccessor = Indent(cacheMode switch
+        {
+            HandlerCacheMode.Fields => string.Join("\n",
+                "[MethodImpl(MethodImplOptions.AggressiveInlining)]",
+                "[DebuggerStepThrough]",
+                "private T Get<T>(ref T? field) where T : notnull",
+                "{",
+                "    return field ?? (field = _svc.Get<T>());",
+                "}"),
+            HandlerCacheMode.Dictionary => string.Join("\n",
+                "[MethodImpl(MethodImplOptions.AggressiveInlining)]",
+                "[DebuggerStepThrough]",
+                "private T Get<T>() where T : notnull",
+                "{",
+                "    var cache = _cache;",
+                "    if (cache.TryGetValue(typeof(T), out var cached))",
+                "    {",
+                "        return (T)cached!;",
+                "    }",
+                "    var resolved = _svc.Get<T>();",
+                "    cache[typeof(T)] = resolved;",
+                "    return resolved;",
+                "}"),
+            HandlerCacheMode.LazyDictionary => string.Join("\n",
+                "[MethodImpl(MethodImplOptions.AggressiveInlining)]",
+                "[DebuggerStepThrough]",
+                "private T Get<T>() where T : notnull",
+                "{",
+                "    var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();",
+                "    if (cache.TryGetValue(typeof(T), out var cached))",
+                "    {",
+                "        return (T)cached!;",
+                "    }",
+                "    var resolved = _svc.Get<T>();",
+                "    cache[typeof(T)] = resolved;",
+                "    return resolved;",
+                "}"),
+            _ => string.Join("\n",
+                "[MethodImpl(MethodImplOptions.AggressiveInlining)]",
+                "[DebuggerStepThrough]",
+                "private T Get<T>() where T : notnull",
+                "{",
+                "    return _svc.Get<T>();",
+                "}"),
+        });
+
+        static string Indent(string block) =>
+            string.Join("\n", block.Split('\n').Select((line, index) => index == 0 ? line : "    " + line));
 
         var actualSendCases = requestBehaviors
             .OrderBy(r => r.Request.Class, new TypeHierarchyComparer(iRequestType, requestBehaviors.Select(r => r.Request.Class)))
@@ -48,70 +102,92 @@ public static class CodeGenerator
         var usedNotifications = new HashSet<ITypeSymbol>(actualPublishCases.Select(c => c.ActualNotification), SymbolEqualityComparer.Default);
 
         // Generate fields
-        var handlerFields = handlers
-            .Select(h => h.Class)
-            .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
-            .Select(cls => $"private {cls.ToDisplayString(_fqn)}? _{cls.GetVariableName()};");
+        var handlerFields = useFields
+            ? handlers
+                .Select(h => h.Class)
+                .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
+                .Select(cls => $"private {cls.ToDisplayString(_fqn)}? _{cls.GetVariableName()};")
+            : Enumerable.Empty<string>();
 
         // Generate behavior fields specific to each request
-        var behaviorFields = actualRequestBehaviors.SelectMany(r =>
-        {
-            var (request, applicableBehaviors) = r;
-            return applicableBehaviors.Select(b =>
-                $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {b.TResponse.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
-        });
-
-        // Generate behavior fields specific to each notification
-        var notificationBehaviorFields = notificationBehaviors
-            .Where(nb => usedNotifications.Contains(nb.NotificationInfo.ActualNotification))
-            .SelectMany(nb =>
+        var behaviorFields = !useFields
+            ? Enumerable.Empty<string>()
+            : actualRequestBehaviors.SelectMany(r =>
             {
-                var actualNotif = nb.NotificationInfo.ActualNotification;
-                return nb.Behaviors.Select(b =>
-                    $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{actualNotif.GetVariableName()};");
+                var (request, applicableBehaviors) = r;
+                return applicableBehaviors.Select(b =>
+                    $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {b.TResponse.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
             });
 
+        // Generate behavior fields specific to each notification
+        var notificationBehaviorFields = !useFields
+            ? Enumerable.Empty<string>()
+            : notificationBehaviors
+                .Where(nb => usedNotifications.Contains(nb.NotificationInfo.ActualNotification))
+                .SelectMany(nb =>
+                {
+                    var actualNotif = nb.NotificationInfo.ActualNotification;
+                    return nb.Behaviors.Select(b =>
+                        $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{actualNotif.GetVariableName()};");
+                });
+
         // Generate notification handler fields (Task and ValueTask variants)
-        var notificationHandlerFields = usedNotifications.SelectMany(n =>
+        var notificationHandlerFields = !useFields
+            ? Enumerable.Empty<string>()
+            : usedNotifications.SelectMany(n =>
+            {
+                var fields = new List<string>();
+                var handlersForN = notificationHandlers
+                    .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
+                    .ToList();
+                if (handlersForN.Any(h => !h.IsValueTask))
+                    fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__Handlers;");
+                if (handlersForN.Any(h => h.IsValueTask))
+                    fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.IValueNotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__ValueHandlers;");
+                return fields;
+            });
+
+        // Dictionary backed cache fields (HandlerCache.Dictionary / HandlerCache.LazyDictionary)
+        var cacheFields = cacheMode switch
         {
-            var fields = new List<string>();
-            var handlersForN = notificationHandlers
-                .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
-                .ToList();
-            if (handlersForN.Any(h => !h.IsValueTask))
-                fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__Handlers;");
-            if (handlersForN.Any(h => h.IsValueTask))
-                fields.Add($"private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.IValueNotificationHandler<{n.ToDisplayString(_fqn)}>>? _{n.GetVariableName()}__ValueHandlers;");
-            return fields;
-        });
+            HandlerCacheMode.Dictionary => new[]
+            {
+                "private readonly global::System.Collections.Generic.Dictionary<global::System.Type, object?> _cache = new();",
+            },
+            HandlerCacheMode.LazyDictionary => new[]
+            {
+                "private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;",
+            },
+            _ => Array.Empty<string>(),
+        };
 
         // Generate Task Send method switch cases
         var taskSendCases = actualSendCases.Select(c =>
         {
             var handlerIsValueTask = handlers.FirstOrDefault(h => h.TRequest.Equals(c.ActualRequest, SymbolEqualityComparer.Default)).IsValueTask;
-            return GenerateTaskSendCase(c.ActualRequest, c.Request, handlerIsValueTask, className);
+            return GenerateTaskSendCase(c.ActualRequest, c.Request, handlerIsValueTask, className, cacheMode);
         });
 
         // Generate ValueTask Send method switch cases
         var valueSendCases = actualSendCases.Select(c =>
         {
             var handlerIsValueTask = handlers.FirstOrDefault(h => h.TRequest.Equals(c.ActualRequest, SymbolEqualityComparer.Default)).IsValueTask;
-            return GenerateValueSendCase(c.ActualRequest, c.Request, handlerIsValueTask, className);
+            return GenerateValueSendCase(c.ActualRequest, c.Request, handlerIsValueTask, className, cacheMode);
         });
 
         // Generate behavior chain methods for requests
         var behaviorMethods = actualRequestBehaviors
-            .Select(r => TryGenerateBehaviorMethod(handlers, r))
+            .Select(r => TryGenerateBehaviorMethod(handlers, r, cacheMode))
             .Where(m => m != null);
 
         // Generate Task Publish method switch cases (Task-based notification handlers only)
         var taskPublishCases = actualPublishCases
-            .Select(n => GenerateTaskPublishCase(n.ActualNotification, n.Notification, notificationHandlers, notificationBehaviors))
+            .Select(n => GenerateTaskPublishCase(n.ActualNotification, n.Notification, notificationHandlers, notificationBehaviors, cacheMode))
             .Where(c => c != null);
 
         // Generate ValueTask Publish method switch cases (ValueTask-based notification handlers only)
         var valuePublishCases = actualPublishCases
-            .Select(n => GenerateValuePublishCase(n.ActualNotification, n.Notification, notificationHandlers, notificationBehaviors))
+            .Select(n => GenerateValuePublishCase(n.ActualNotification, n.Notification, notificationHandlers, notificationBehaviors, cacheMode))
             .Where(c => c != null);
 
         // Generate known types
@@ -175,7 +251,7 @@ public static class CodeGenerator
                {
                    #region Fields
                
-                   {{string.Join("\n    ", handlerFields.Concat(behaviorFields).Concat(notificationBehaviorFields).Concat(notificationHandlerFields))}}
+                   {{string.Join("\n    ", cacheFields.Concat(handlerFields).Concat(behaviorFields).Concat(notificationBehaviorFields).Concat(notificationHandlerFields))}}
                
                    private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
                
@@ -303,12 +379,7 @@ public static class CodeGenerator
                
                    {{string.Join("\n\n    ", behaviorMethods)}}
                
-                   [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                   [DebuggerStepThrough]
-                   private T Get<T>(ref T? field) where T : notnull
-                   {
-                       return field ?? (field = _svc.Get<T>());
-                   }
+                   {{cacheAccessor}}
                
                    /// <summary>
                    /// Provides lists of SwitchMediator component implementation types.
@@ -356,11 +427,19 @@ public static class CodeGenerator
         return null;
     }
 
+    /// <summary>
+    /// How a component is resolved at the call sites: a field slot (HandlerCache.Fields) or a
+    /// typed lookup through the cache accessor (every other mode).
+    /// </summary>
+    private static string CacheCall(HandlerCacheMode cacheMode, string fieldExpression, string typeExpression) =>
+        cacheMode == HandlerCacheMode.Fields ? $"Get(ref {fieldExpression})" : $"Get<{typeExpression}>()";
+
     private static string GenerateTaskSendCase(
         ITypeSymbol actualHandler,
         (INamedTypeSymbol Class, ITypeSymbol TResponse) request,
         bool handlerIsValueTask,
-        string className) =>
+        string className,
+        HandlerCacheMode cacheMode) =>
         handlerIsValueTask
             // ValueTask handler → wrap with .AsTask() for Task send path
             ? $$"""
@@ -383,7 +462,8 @@ public static class CodeGenerator
         ITypeSymbol actualHandler,
         (INamedTypeSymbol Class, ITypeSymbol TResponse) request,
         bool handlerIsValueTask,
-        string className) =>
+        string className,
+        HandlerCacheMode cacheMode) =>
         handlerIsValueTask
             // ValueTask handler → return directly (zero allocation)
             ? $$"""
@@ -429,7 +509,8 @@ public static class CodeGenerator
         ITypeSymbol actualNotification,
         ITypeSymbol notification,
         List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
-        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> notificationBehaviors)
+        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> notificationBehaviors,
+        HandlerCacheMode cacheMode)
     {
         // Only generate Task publish case for Task-based notification handlers
         var handlersForNotification = notificationHandlers
@@ -449,8 +530,9 @@ public static class CodeGenerator
         var notificationType = actualNotification.ToDisplayString(_fqn);
 
         var behaviorResolutions = taskBehaviors.Select(b =>
-            $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
+            $"var {b.Class.GetVariableName()}__{notificationName} = instance.{CacheCall(cacheMode, $"instance._{b.Class.GetVariableName()}__{notificationName}", $"{b.Class.ToDisplayString(_fqn).DropGenerics()}<{notificationType}>")};");
 
+        var handlersResolve = $"instance.{CacheCall(cacheMode, $"instance._{actualNotification.GetVariableName()}__Handlers", "global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<" + notificationType + ">>")}";
         var typedVar = "typedNotification";
         var coreCall = $"handler.Handle({typedVar}, cancellationToken)";
         var chain = BehaviorChainBuilder.BuildNotification(taskBehaviors, notificationName, typedVar, coreCall);
@@ -459,7 +541,7 @@ public static class CodeGenerator
                       ( // case {{notification}}:
                           typeof({{notification.ToDisplayString(_fqn)}}), async (instance, notification, cancellationToken) =>
                           {
-                              var handlers = instance.Get(ref instance._{{actualNotification.GetVariableName()}}__Handlers);
+                              var handlers = {{handlersResolve}};
                               {{string.Join("\n                    ", behaviorResolutions)}}
                               var {{typedVar}} = ({{notificationType}}) notification;
                               
@@ -477,7 +559,8 @@ public static class CodeGenerator
         ITypeSymbol actualNotification,
         ITypeSymbol notification,
         List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> notificationHandlers,
-        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> notificationBehaviors)
+        List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> notificationBehaviors,
+        HandlerCacheMode cacheMode)
     {
         // Only generate ValueTask publish case for ValueTask-based notification handlers
         var handlersForNotification = notificationHandlers
@@ -497,7 +580,9 @@ public static class CodeGenerator
         var notificationType = actualNotification.ToDisplayString(_fqn);
 
         var behaviorResolutions = valueBehaviors.Select(b =>
-            $"var {b.Class.GetVariableName()}__{notificationName} = instance.Get(ref instance._{b.Class.GetVariableName()}__{notificationName});");
+            $"var {b.Class.GetVariableName()}__{notificationName} = instance.{CacheCall(cacheMode, $"instance._{b.Class.GetVariableName()}__{notificationName}", $"{b.Class.ToDisplayString(_fqn).DropGenerics()}<{notificationType}>")};");
+
+        var handlersResolve = $"instance.{CacheCall(cacheMode, $"instance._{actualNotification.GetVariableName()}__ValueHandlers", "global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.IValueNotificationHandler<" + notificationType + ">>")}";
 
         var typedVar = "typedNotification";
         var coreCall = $"handler.Handle({typedVar}, cancellationToken)";
@@ -507,7 +592,7 @@ public static class CodeGenerator
                       ( // case {{notification}}:
                           typeof({{notification.ToDisplayString(_fqn)}}), async (instance, notification, cancellationToken) =>
                           {
-                              var handlers = instance.Get(ref instance._{{actualNotification.GetVariableName()}}__ValueHandlers);
+                              var handlers = {{handlersResolve}};
                               {{string.Join("\n                    ", behaviorResolutions)}}
                               var {{typedVar}} = ({{notificationType}}) notification;
                               
@@ -522,14 +607,15 @@ public static class CodeGenerator
     }
 
     private static string? TryGenerateBehaviorMethod(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
-        ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors) r)
+        ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors) r,
+        HandlerCacheMode cacheMode)
     {
         var (request, applicableBehaviors) = r;
         var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(request.Class, SymbolEqualityComparer.Default));
         if (handler == default) return null;
         var requestName = request.Class.GetVariableName();
-        var chainVars = applicableBehaviors.Select(behavior => $"var {behavior.Class.GetVariableName()}__{requestName} = Get(ref _{behavior.Class.GetVariableName()}__{requestName});");
-        var coreVar = $"var {handler.Class.GetVariableName()} = Get(ref _{handler.Class.GetVariableName()});";
+        var chainVars = applicableBehaviors.Select(behavior => $"var {behavior.Class.GetVariableName()}__{requestName} = {CacheCall(cacheMode, $"_{behavior.Class.GetVariableName()}__{requestName}", $"{behavior.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {behavior.TResponse.ToDisplayString(_fqn)}>")};");
+        var coreVar = $"var {handler.Class.GetVariableName()} = {CacheCall(cacheMode, $"_{handler.Class.GetVariableName()}", handler.Class.ToDisplayString(_fqn))};";
 
         var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
         var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall);
