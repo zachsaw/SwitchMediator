@@ -32,6 +32,15 @@ public static class CodeGenerator
         var cacheMode = analysis.HandlerCacheMode;
         var useFields = cacheMode == HandlerCacheMode.Fields;
 
+        // How the mediator obtains a component from the container. "Direct" takes System.IServiceProvider
+        // straight from the scope, removing the ISwitchMediatorServiceProvider service and its allocation.
+        var serviceProviderType = analysis.ServiceProviderMode == MediatorServiceProviderMode.Direct
+            ? "global::System.IServiceProvider"
+            : "global::Mediator.Switch.ISwitchMediatorServiceProvider";
+        var resolveExpression = analysis.ServiceProviderMode == MediatorServiceProviderMode.Direct
+            ? "(T)(_svc.GetService(typeof(T)) ?? throw new global::System.InvalidOperationException($\"No service for type '{typeof(T)}' has been registered.\"))"
+            : "_svc.Get<T>()";
+
         // The cache accessor emitted into the mediator, one flavour per HandlerCache mode.
         // Continuation lines are padded by one member level because the block is interpolated
         // after the template's own indentation, which only applies to its first line.
@@ -42,7 +51,7 @@ public static class CodeGenerator
                 "[DebuggerStepThrough]",
                 "private T Get<T>(ref T? field) where T : notnull",
                 "{",
-                "    return field ?? (field = _svc.Get<T>());",
+                $"    return field ?? (field = {resolveExpression});",
                 "}"),
             HandlerCacheMode.Dictionary => string.Join("\n",
                 "[MethodImpl(MethodImplOptions.AggressiveInlining)]",
@@ -54,7 +63,7 @@ public static class CodeGenerator
                 "    {",
                 "        return (T)cached!;",
                 "    }",
-                "    var resolved = _svc.Get<T>();",
+                $"    var resolved = {resolveExpression};",
                 "    cache[typeof(T)] = resolved;",
                 "    return resolved;",
                 "}"),
@@ -68,7 +77,7 @@ public static class CodeGenerator
                 "    {",
                 "        return (T)cached!;",
                 "    }",
-                "    var resolved = _svc.Get<T>();",
+                $"    var resolved = {resolveExpression};",
                 "    cache[typeof(T)] = resolved;",
                 "    return resolved;",
                 "}"),
@@ -77,7 +86,7 @@ public static class CodeGenerator
                 "[DebuggerStepThrough]",
                 "private T Get<T>() where T : notnull",
                 "{",
-                "    return _svc.Get<T>();",
+                $"    return {resolveExpression};",
                 "}"),
         });
 
@@ -253,13 +262,13 @@ public static class CodeGenerator
                
                    {{string.Join("\n    ", cacheFields.Concat(handlerFields).Concat(behaviorFields).Concat(notificationBehaviorFields).Concat(notificationHandlerFields))}}
                
-                   private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
+                   private readonly {{serviceProviderType}} _svc;
                
                    #endregion
                
                    #region Constructor
                
-                   public {{className}}(global::Mediator.Switch.ISwitchMediatorServiceProvider serviceProvider)
+                   public {{className}}({{serviceProviderType}} serviceProvider)
                    {
                        _svc = serviceProvider;
                    }

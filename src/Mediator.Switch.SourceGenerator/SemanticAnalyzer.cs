@@ -56,6 +56,7 @@ public class SemanticAnalyzer
         var notificationHandlers = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)>();
         INamedTypeSymbol? mediatorClass = null;
         var handlerCacheMode = HandlerCacheMode.LazyDictionary;
+        var serviceProviderMode = MediatorServiceProviderMode.Abstraction;
 
         // Analyze types discovered by the syntax receiver
         foreach (var typeSyntax in types)
@@ -82,7 +83,8 @@ public class SemanticAnalyzer
                 }
 
                 mediatorClass = typeSymbol;
-                handlerCacheMode = GetHandlerCacheMode(typeSymbol);
+                handlerCacheMode = GetEnumNamedArgument(typeSymbol, "HandlerCache", HandlerCacheMode.LazyDictionary);
+                serviceProviderMode = GetEnumNamedArgument(typeSymbol, "ServiceProvider", MediatorServiceProviderMode.Abstraction);
             }
 
             // Proceed with standard analysis
@@ -116,28 +118,31 @@ public class SemanticAnalyzer
             NotificationHandlers: notificationHandlers,
             NotificationBehaviors: processedNotificationBehaviors,
             Notifications: notifications,
-            HandlerCacheMode: handlerCacheMode
+            HandlerCacheMode: handlerCacheMode,
+            ServiceProviderMode: serviceProviderMode
         );
     }
 
     /// <summary>
-    /// Reads <c>[SwitchMediator(HandlerCache = HandlerCache.Fields)]</c>. The value is matched by
+    /// Reads a named enum argument from <c>[SwitchMediator]</c>, e.g.
+    /// <c>[SwitchMediator(HandlerCache = HandlerCache.Fields)]</c>. The value is matched by
     /// member name so the generator keeps working against Mediator.Switch versions that predate
-    /// the property (in which case the default applies).
+    /// the property (in which case <paramref name="fallback"/> applies).
     /// </summary>
-    private HandlerCacheMode GetHandlerCacheMode(INamedTypeSymbol typeSymbol)
+    private TEnum GetEnumNamedArgument<TEnum>(INamedTypeSymbol typeSymbol, string argumentName, TEnum fallback)
+        where TEnum : struct, Enum
     {
         var attribute = typeSymbol.GetAttributes()
             .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, _switchMediatorAttributeSymbol));
 
         if (attribute is null)
         {
-            return HandlerCacheMode.LazyDictionary;
+            return fallback;
         }
 
         foreach (var namedArgument in attribute.NamedArguments)
         {
-            if (namedArgument.Key != "HandlerCache" || namedArgument.Value.Value is null)
+            if (namedArgument.Key != argumentName || namedArgument.Value.Value is null)
             {
                 continue;
             }
@@ -147,13 +152,13 @@ public class SemanticAnalyzer
                 .OfType<IFieldSymbol>()
                 .FirstOrDefault(f => f.HasConstantValue && f.ConstantValue is int value && value == rawValue)?.Name;
 
-            if (memberName is not null && Enum.TryParse<HandlerCacheMode>(memberName, out var mode))
+            if (memberName is not null && Enum.TryParse<TEnum>(memberName, out var parsed))
             {
-                return mode;
+                return parsed;
             }
         }
 
-        return HandlerCacheMode.LazyDictionary;
+        return fallback;
     }
 
     private bool IsSwitchMediator(INamedTypeSymbol typeSymbol) =>

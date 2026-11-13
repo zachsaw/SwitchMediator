@@ -20,7 +20,35 @@ public sealed class SwitchMediatorAttribute : Attribute
     /// Defaults to <see cref="HandlerCache.LazyDictionary"/>.
     /// </summary>
     public HandlerCache HandlerCache { get; set; } = HandlerCache.LazyDictionary;
+
+    /// <summary>
+    /// Controls the type the generated mediator constructor takes to resolve its dependencies.
+    /// Defaults to <see cref="MediatorServiceProvider.Abstraction"/>.
+    /// </summary>
+    public MediatorServiceProvider ServiceProvider { get; set; } = MediatorServiceProvider.Abstraction;
 }
+
+/// <summary>
+/// How the generated mediator receives the container it resolves its dependencies from.
+/// </summary>
+public enum MediatorServiceProvider
+{
+    /// <summary>
+    /// Constructor takes <see cref="ISwitchMediatorServiceProvider"/> (the default). Container
+    /// agnostic: any container can implement that interface.
+    /// </summary>
+    Abstraction,
+
+    /// <summary>
+    /// Constructor takes <see cref="System.IServiceProvider"/> directly. Removes the
+    /// <see cref="ISwitchMediatorServiceProvider"/> service from the resolution graph, which is
+    /// one less scoped service and one less allocation per scope. Intended for
+    /// Microsoft.Extensions.DependencyInjection, where <see cref="System.IServiceProvider"/> is
+    /// resolved to the current scope automatically.
+    /// </summary>
+    Direct,
+}
+
 
 /// <summary>
 /// How the generated mediator keeps the handlers and pipeline behaviors it resolves.
