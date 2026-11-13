@@ -29,10 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.OrderedPipeline.CalculationRequestHandler? _tests_OrderedPipeline_CalculationRequestHandler;
-    private global::Tests.OrderedPipeline.MonitoringBehavior<global::Tests.OrderedPipeline.CalculationRequest, int>? _tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest;
-    private global::Tests.OrderedPipeline.ValidationBehavior<global::Tests.OrderedPipeline.CalculationRequest, int>? _tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest;
-    private global::Tests.OrderedPipeline.LoggingBehavior<global::Tests.OrderedPipeline.CalculationRequest, int>? _tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -171,10 +168,10 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.OrderedPipeline.CalculationRequest request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest = Get(ref _tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest);
-        var tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest = Get(ref _tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest);
-        var tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest = Get(ref _tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest);
-        var tests_OrderedPipeline_CalculationRequestHandler = Get(ref _tests_OrderedPipeline_CalculationRequestHandler);
+        var tests_OrderedPipeline_MonitoringBehavior__tests_OrderedPipeline_CalculationRequest = Get<global::Tests.OrderedPipeline.MonitoringBehavior<global::Tests.OrderedPipeline.CalculationRequest, int>>();
+        var tests_OrderedPipeline_ValidationBehavior__tests_OrderedPipeline_CalculationRequest = Get<global::Tests.OrderedPipeline.ValidationBehavior<global::Tests.OrderedPipeline.CalculationRequest, int>>();
+        var tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest = Get<global::Tests.OrderedPipeline.LoggingBehavior<global::Tests.OrderedPipeline.CalculationRequest, int>>();
+        var tests_OrderedPipeline_CalculationRequestHandler = Get<global::Tests.OrderedPipeline.CalculationRequestHandler>();
 
         return
             tests_OrderedPipeline_LoggingBehavior__tests_OrderedPipeline_CalculationRequest.Handle(request, ct =>
@@ -188,9 +185,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

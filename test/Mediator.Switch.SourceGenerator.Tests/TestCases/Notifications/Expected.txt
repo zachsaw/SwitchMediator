@@ -29,8 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.Notifications.SimpleRequestHandler? _tests_Notifications_SimpleRequestHandler;
-    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Notifications.OrderCreatedEvent>>? _tests_Notifications_OrderCreatedEvent__Handlers;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -129,7 +128,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             ( // case Tests.Notifications.OrderCreatedEvent:
                 typeof(global::Tests.Notifications.OrderCreatedEvent), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_Notifications_OrderCreatedEvent__Handlers);
+                    var handlers = instance.Get<global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Notifications.OrderCreatedEvent>>>();
 
                     var typedNotification = (global::Tests.Notifications.OrderCreatedEvent) notification;
 
@@ -183,7 +182,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Notifications_SimpleRequestHandler = Get(ref _tests_Notifications_SimpleRequestHandler);
+        var tests_Notifications_SimpleRequestHandler = Get<global::Tests.Notifications.SimpleRequestHandler>();
 
         return
             /* Request Handler */ tests_Notifications_SimpleRequestHandler.Handle(request, cancellationToken);
@@ -191,9 +190,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

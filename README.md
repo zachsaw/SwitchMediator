@@ -22,6 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
+* [What's New in V3.3](#whats-new-in-v33)
 * [What's New in V3.2](#whats-new-in-v32)
 * [What's New in V3.1](#whats-new-in-v31)
 * [What's New in V3](#whats-new-in-v3)
@@ -33,6 +34,39 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [Installation](#installation)
 * [Usage Example](#usage-example)
 * [License](#license)
+
+ ---
+
+## What's New in V3.3
+
+### Handler cache selection (new default: `LazyDictionary`)
+
+The generated mediator used to keep **one nullable field per handler and per (behavior, request) pair**. That makes the mediator instance grow with the number of request types rather than with what a scope actually uses, and it is allocated on every `IServiceScope` (i.e. every HTTP request).
+
+The cache is now configurable through the marker attribute:
+
+```csharp
+[SwitchMediator]                                              // LazyDictionary (new default)
+[SwitchMediator(HandlerCache = HandlerCache.Fields)]          // previous behaviour
+[SwitchMediator(HandlerCache = HandlerCache.Dictionary)]      // dictionary created with the mediator
+[SwitchMediator(HandlerCache = HandlerCache.None)]            // no cache: resolve on every send
+public partial class AppMediator;
+```
+
+Measured on a mediator generated from 1,000 request handlers (BenchmarkDotNet, .NET 10.0.14, M.E.DI 10.0.12, Apple M3 Max, default job):
+
+| `HandlerCache` | `CreateScope` + resolve | Allocated | `Send` on a warm mediator |
+| :--- | ---: | ---: | ---: |
+| `Fields` | 351.8 ns | 8,376 B | 8.4 ns |
+| **`LazyDictionary`** | **104.7 ns** | **368 B** | 11.6 ns |
+| `Dictionary` | 125.9 ns | 448 B (dictionary created with the mediator) | 12.8 ns |
+| `None` | 120.5 ns | 360 B | 24.5 ns |
+
+The trade-off is deliberate: the dictionary makes the resolution ~70% faster and ~96% lighter per scope, and costs a few nanoseconds per component on each subsequent send (a field read is ~0.3 ns, a dictionary hit ~0.7 ns, a DI lookup ~14 ns).
+
+> **`HandlerCache.None`** keeps the mediator instance at ~24 bytes and is the cheapest option for scopes that send a single message, but it changes the effective lifetime of handlers registered with `ServiceLifetime.Transient`: they are created once per mediator instance today, and per send with `None`.
+
+No source changes are needed to upgrade. If you want the previous allocation profile back, set `HandlerCache = HandlerCache.Fields`.
 
  ---
 

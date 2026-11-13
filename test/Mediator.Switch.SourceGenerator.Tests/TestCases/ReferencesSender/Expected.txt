@@ -29,7 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.ReferencesSender.PingHandler? _tests_ReferencesSender_PingHandler;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -169,7 +169,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_ReferencesSender_PingHandler = Get(ref _tests_ReferencesSender_PingHandler);
+        var tests_ReferencesSender_PingHandler = Get<global::Tests.ReferencesSender.PingHandler>();
 
         return
             /* Request Handler */ tests_ReferencesSender_PingHandler.Handle(request, cancellationToken);
@@ -177,9 +177,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

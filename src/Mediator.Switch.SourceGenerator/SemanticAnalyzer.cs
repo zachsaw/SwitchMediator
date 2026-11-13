@@ -1,3 +1,4 @@
+using System.Globalization;
 using Mediator.Switch.SourceGenerator.Exceptions;
 using Mediator.Switch.SourceGenerator.Generator;
 using Microsoft.CodeAnalysis;
@@ -54,6 +55,7 @@ public class SemanticAnalyzer
         var notifications = new List<ITypeSymbol>();
         var notificationHandlers = new List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)>();
         INamedTypeSymbol? mediatorClass = null;
+        var handlerCacheMode = HandlerCacheMode.LazyDictionary;
 
         // Analyze types discovered by the syntax receiver
         foreach (var typeSyntax in types)
@@ -80,6 +82,7 @@ public class SemanticAnalyzer
                 }
 
                 mediatorClass = typeSymbol;
+                handlerCacheMode = GetHandlerCacheMode(typeSymbol);
             }
 
             // Proceed with standard analysis
@@ -112,8 +115,45 @@ public class SemanticAnalyzer
             RequestBehaviors: requestBehaviors,
             NotificationHandlers: notificationHandlers,
             NotificationBehaviors: processedNotificationBehaviors,
-            Notifications: notifications
+            Notifications: notifications,
+            HandlerCacheMode: handlerCacheMode
         );
+    }
+
+    /// <summary>
+    /// Reads <c>[SwitchMediator(HandlerCache = HandlerCache.Fields)]</c>. The value is matched by
+    /// member name so the generator keeps working against Mediator.Switch versions that predate
+    /// the property (in which case the default applies).
+    /// </summary>
+    private HandlerCacheMode GetHandlerCacheMode(INamedTypeSymbol typeSymbol)
+    {
+        var attribute = typeSymbol.GetAttributes()
+            .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, _switchMediatorAttributeSymbol));
+
+        if (attribute is null)
+        {
+            return HandlerCacheMode.LazyDictionary;
+        }
+
+        foreach (var namedArgument in attribute.NamedArguments)
+        {
+            if (namedArgument.Key != "HandlerCache" || namedArgument.Value.Value is null)
+            {
+                continue;
+            }
+
+            var rawValue = Convert.ToInt32(namedArgument.Value.Value, CultureInfo.InvariantCulture);
+            var memberName = namedArgument.Value.Type?.GetMembers()
+                .OfType<IFieldSymbol>()
+                .FirstOrDefault(f => f.HasConstantValue && f.ConstantValue is int value && value == rawValue)?.Name;
+
+            if (memberName is not null && Enum.TryParse<HandlerCacheMode>(memberName, out var mode))
+            {
+                return mode;
+            }
+        }
+
+        return HandlerCacheMode.LazyDictionary;
     }
 
     private bool IsSwitchMediator(INamedTypeSymbol typeSymbol) =>

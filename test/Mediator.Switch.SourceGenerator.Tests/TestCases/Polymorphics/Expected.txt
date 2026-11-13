@@ -29,13 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.Polymorphics.DogRequestHandler? _tests_Polymorphics_DogRequestHandler;
-    private global::Tests.Polymorphics.CatRequestHandler? _tests_Polymorphics_CatRequestHandler;
-    private global::Tests.Polymorphics.GenericAnimalRequestHandler? _tests_Polymorphics_GenericAnimalRequestHandler;
-    private global::Tests.Polymorphics.CarRequestHandler? _tests_Polymorphics_CarRequestHandler;
-    private global::Tests.Polymorphics.VehicleRequestHandler? _tests_Polymorphics_VehicleRequestHandler;
-    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Polymorphics.OrderPlacedEvent>>? _tests_Polymorphics_OrderPlacedEvent__Handlers;
-    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Polymorphics.UserCreatedEvent>>? _tests_Polymorphics_UserCreatedEvent__Handlers;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -189,7 +183,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             ( // case Tests.Polymorphics.OrderPlacedEvent:
                 typeof(global::Tests.Polymorphics.OrderPlacedEvent), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_Polymorphics_OrderPlacedEvent__Handlers);
+                    var handlers = instance.Get<global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Polymorphics.OrderPlacedEvent>>>();
 
                     var typedNotification = (global::Tests.Polymorphics.OrderPlacedEvent) notification;
 
@@ -203,7 +197,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             ( // case Tests.Polymorphics.UserCreatedEvent:
                 typeof(global::Tests.Polymorphics.UserCreatedEvent), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_Polymorphics_UserCreatedEvent__Handlers);
+                    var handlers = instance.Get<global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.Polymorphics.UserCreatedEvent>>>();
 
                     var typedNotification = (global::Tests.Polymorphics.UserCreatedEvent) notification;
 
@@ -257,7 +251,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Polymorphics_GenericAnimalRequestHandler = Get(ref _tests_Polymorphics_GenericAnimalRequestHandler);
+        var tests_Polymorphics_GenericAnimalRequestHandler = Get<global::Tests.Polymorphics.GenericAnimalRequestHandler>();
 
         return
             /* Request Handler */ tests_Polymorphics_GenericAnimalRequestHandler.Handle(request, cancellationToken);
@@ -268,7 +262,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Polymorphics_DogRequestHandler = Get(ref _tests_Polymorphics_DogRequestHandler);
+        var tests_Polymorphics_DogRequestHandler = Get<global::Tests.Polymorphics.DogRequestHandler>();
 
         return
             /* Request Handler */ tests_Polymorphics_DogRequestHandler.Handle(request, cancellationToken);
@@ -279,7 +273,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Polymorphics_CatRequestHandler = Get(ref _tests_Polymorphics_CatRequestHandler);
+        var tests_Polymorphics_CatRequestHandler = Get<global::Tests.Polymorphics.CatRequestHandler>();
 
         return
             /* Request Handler */ tests_Polymorphics_CatRequestHandler.Handle(request, cancellationToken);
@@ -290,7 +284,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Polymorphics_VehicleRequestHandler = Get(ref _tests_Polymorphics_VehicleRequestHandler);
+        var tests_Polymorphics_VehicleRequestHandler = Get<global::Tests.Polymorphics.VehicleRequestHandler>();
 
         return
             /* Request Handler */ tests_Polymorphics_VehicleRequestHandler.Handle(request, cancellationToken);
@@ -301,7 +295,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::System.Threading.CancellationToken cancellationToken)
     {
 
-        var tests_Polymorphics_CarRequestHandler = Get(ref _tests_Polymorphics_CarRequestHandler);
+        var tests_Polymorphics_CarRequestHandler = Get<global::Tests.Polymorphics.CarRequestHandler>();
 
         return
             /* Request Handler */ tests_Polymorphics_CarRequestHandler.Handle(request, cancellationToken);
@@ -309,9 +303,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

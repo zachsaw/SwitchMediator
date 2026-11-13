@@ -29,9 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.NotificationPipelineConstrained.AuditBehavior<global::Tests.NotificationPipelineConstrained.UserCreated>? _tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated;
-    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.NotificationPipelineConstrained.SystemTick>>? _tests_NotificationPipelineConstrained_SystemTick__Handlers;
-    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.NotificationPipelineConstrained.UserCreated>>? _tests_NotificationPipelineConstrained_UserCreated__Handlers;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -121,7 +119,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             ( // case Tests.NotificationPipelineConstrained.SystemTick:
                 typeof(global::Tests.NotificationPipelineConstrained.SystemTick), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_NotificationPipelineConstrained_SystemTick__Handlers);
+                    var handlers = instance.Get<global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.NotificationPipelineConstrained.SystemTick>>>();
 
                     var typedNotification = (global::Tests.NotificationPipelineConstrained.SystemTick) notification;
 
@@ -135,8 +133,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             ( // case Tests.NotificationPipelineConstrained.UserCreated:
                 typeof(global::Tests.NotificationPipelineConstrained.UserCreated), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_NotificationPipelineConstrained_UserCreated__Handlers);
-                    var tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated = instance.Get(ref instance._tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated);
+                    var handlers = instance.Get<global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.NotificationPipelineConstrained.UserCreated>>>();
+                    var tests_NotificationPipelineConstrained_AuditBehavior__tests_NotificationPipelineConstrained_UserCreated = instance.Get<global::Tests.NotificationPipelineConstrained.AuditBehavior<global::Tests.NotificationPipelineConstrained.UserCreated>>();
                     var typedNotification = (global::Tests.NotificationPipelineConstrained.UserCreated) notification;
 
                     foreach (var handler in handlers)
@@ -190,9 +188,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

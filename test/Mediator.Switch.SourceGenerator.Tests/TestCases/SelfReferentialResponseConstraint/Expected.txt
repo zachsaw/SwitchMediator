@@ -29,8 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.SelfReferentialResponseConstraint.DeleteMenuItemCommandHandler? _tests_SelfReferentialResponseConstraint_DeleteMenuItemCommandHandler;
-    private global::Tests.SelfReferentialResponseConstraint.UnhandledExceptionBehaviour<global::Tests.SelfReferentialResponseConstraint.DeleteMenuItemCommand, global::Tests.SelfReferentialResponseConstraint.OneOfResult>? _tests_SelfReferentialResponseConstraint_UnhandledExceptionBehaviour__tests_SelfReferentialResponseConstraint_DeleteMenuItemCommand;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -168,8 +167,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.SelfReferentialResponseConstraint.DeleteMenuItemCommand request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_SelfReferentialResponseConstraint_UnhandledExceptionBehaviour__tests_SelfReferentialResponseConstraint_DeleteMenuItemCommand = Get(ref _tests_SelfReferentialResponseConstraint_UnhandledExceptionBehaviour__tests_SelfReferentialResponseConstraint_DeleteMenuItemCommand);
-        var tests_SelfReferentialResponseConstraint_DeleteMenuItemCommandHandler = Get(ref _tests_SelfReferentialResponseConstraint_DeleteMenuItemCommandHandler);
+        var tests_SelfReferentialResponseConstraint_UnhandledExceptionBehaviour__tests_SelfReferentialResponseConstraint_DeleteMenuItemCommand = Get<global::Tests.SelfReferentialResponseConstraint.UnhandledExceptionBehaviour<global::Tests.SelfReferentialResponseConstraint.DeleteMenuItemCommand, global::Tests.SelfReferentialResponseConstraint.OneOfResult>>();
+        var tests_SelfReferentialResponseConstraint_DeleteMenuItemCommandHandler = Get<global::Tests.SelfReferentialResponseConstraint.DeleteMenuItemCommandHandler>();
 
         return
             tests_SelfReferentialResponseConstraint_UnhandledExceptionBehaviour__tests_SelfReferentialResponseConstraint_DeleteMenuItemCommand.Handle(request, ct =>
@@ -179,9 +178,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>

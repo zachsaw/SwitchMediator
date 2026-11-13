@@ -29,15 +29,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 {
     #region Fields
 
-    private global::Tests.FullPipeline.GetUserRequestHandler? _tests_FullPipeline_GetUserRequestHandler;
-    private global::Tests.FullPipeline.CreateOrderRequestHandler? _tests_FullPipeline_CreateOrderRequestHandler;
-    private global::Tests.FullPipeline.AuditBehavior<global::Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest;
-    private global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest;
-    private global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.GetUserRequest, string>? _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest;
-    private global::Tests.FullPipeline.TransactionBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest;
-    private global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest;
-    private global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>? _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest;
-    private global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.FullPipeline.UserLoggedInEvent>>? _tests_FullPipeline_UserLoggedInEvent__Handlers;
+    private global::System.Collections.Generic.Dictionary<global::System.Type, object?>? _cache;
 
     private readonly global::Mediator.Switch.ISwitchMediatorServiceProvider _svc;
 
@@ -147,7 +139,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
             ( // case Tests.FullPipeline.UserLoggedInEvent:
                 typeof(global::Tests.FullPipeline.UserLoggedInEvent), async (instance, notification, cancellationToken) =>
                 {
-                    var handlers = instance.Get(ref instance._tests_FullPipeline_UserLoggedInEvent__Handlers);
+                    var handlers = instance.Get<global::System.Collections.Generic.IEnumerable<global::Mediator.Switch.INotificationHandler<global::Tests.FullPipeline.UserLoggedInEvent>>>();
 
                     var typedNotification = (global::Tests.FullPipeline.UserLoggedInEvent) notification;
 
@@ -200,10 +192,10 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.FullPipeline.GetUserRequest request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest = Get(ref _tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest);
-        var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest = Get(ref _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest);
-        var tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest = Get(ref _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest);
-        var tests_FullPipeline_GetUserRequestHandler = Get(ref _tests_FullPipeline_GetUserRequestHandler);
+        var tests_FullPipeline_AuditBehavior__tests_FullPipeline_GetUserRequest = Get<global::Tests.FullPipeline.AuditBehavior<global::Tests.FullPipeline.GetUserRequest, string>>();
+        var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_GetUserRequest = Get<global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.GetUserRequest, string>>();
+        var tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest = Get<global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.GetUserRequest, string>>();
+        var tests_FullPipeline_GetUserRequestHandler = Get<global::Tests.FullPipeline.GetUserRequestHandler>();
 
         return
             tests_FullPipeline_LoggingBehavior__tests_FullPipeline_GetUserRequest.Handle(request, ct =>
@@ -219,10 +211,10 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         global::Tests.FullPipeline.CreateOrderRequest request,
         global::System.Threading.CancellationToken cancellationToken)
     {
-        var tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest = Get(ref _tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest);
-        var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest = Get(ref _tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest);
-        var tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest = Get(ref _tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest);
-        var tests_FullPipeline_CreateOrderRequestHandler = Get(ref _tests_FullPipeline_CreateOrderRequestHandler);
+        var tests_FullPipeline_TransactionBehavior__tests_FullPipeline_CreateOrderRequest = Get<global::Tests.FullPipeline.TransactionBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>>();
+        var tests_FullPipeline_ValidationBehavior__tests_FullPipeline_CreateOrderRequest = Get<global::Tests.FullPipeline.ValidationBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>>();
+        var tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest = Get<global::Tests.FullPipeline.LoggingBehavior<global::Tests.FullPipeline.CreateOrderRequest, int>>();
+        var tests_FullPipeline_CreateOrderRequestHandler = Get<global::Tests.FullPipeline.CreateOrderRequestHandler>();
 
         return
             tests_FullPipeline_LoggingBehavior__tests_FullPipeline_CreateOrderRequest.Handle(request, ct =>
@@ -236,9 +228,16 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    private T Get<T>(ref T? field) where T : notnull
+    private T Get<T>() where T : notnull
     {
-        return field ?? (field = _svc.Get<T>());
+        var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();
+        if (cache.TryGetValue(typeof(T), out var cached))
+        {
+            return (T)cached!;
+        }
+        var resolved = _svc.Get<T>();
+        cache[typeof(T)] = resolved;
+        return resolved;
     }
 
     /// <summary>
