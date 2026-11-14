@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
         contents: read # for checking out repo
+        id-token: write # REQUIRED: Allows GitHub to issue an OIDC token for NuGet authentication
 
     steps:
     - name: Checkout repository
@@ -37,7 +38,13 @@ jobs:
       id: get_version
       run: echo "package_version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+    - name: NuGet login (OIDC)
+      id: login
+      uses: NuGet/login@v1
+      with:
+        user: 'zachsaw'
+
     - name: Publish
       run: ./scripts/publish.sh ${{ steps.get_version.outputs.package_version }}
       env:
-        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }} 
