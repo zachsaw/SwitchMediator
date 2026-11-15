@@ -198,7 +198,7 @@ public static class Program
             sb.AppendLine("    {");
             sb.AppendLine("        // Simulate minimal behavior work (e.g., logging or telemetry)");
             sb.AppendLine("        await Task.Yield();");
-            sb.AppendLine("        var response = await next();");
+            sb.AppendLine("        var response = await next(cancellationToken);");
             sb.AppendLine("        return response;");
             sb.AppendLine("    }");
             sb.AppendLine("}");
@@ -211,7 +211,7 @@ public static class Program
             sb.AppendLine("    {");
             sb.AppendLine("        // Simulate minimal behavior work (e.g., logging or telemetry)");
             sb.AppendLine("        await Task.Yield();");
-            sb.AppendLine("        var response = await next();");
+            sb.AppendLine("        var response = await next(cancellationToken);");
             sb.AppendLine("        return response;");
             sb.AppendLine("    }");
             sb.AppendLine("}");

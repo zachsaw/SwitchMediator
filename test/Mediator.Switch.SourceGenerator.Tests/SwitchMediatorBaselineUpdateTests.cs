@@ -42,6 +42,9 @@ public class SwitchMediatorBaselineUpdateTests(ITestOutputHelper output)
     [InlineData("HandlerCacheDictionary")]
     [InlineData("HandlerCacheNone")]
     [InlineData("ServiceProviderDirect")]
+    [InlineData("ContextualPipeline")]
+    [InlineData("ContextualPipelineFields")]
+    [InlineData("MixedPipeline")]
     public async Task UpdateExpectedOutputFile(string testCase)
     {
         await InitializeReferencesAsync(output); // Ensure references are ready

@@ -95,6 +95,25 @@ public interface IValuePipelineBehavior<in TRequest, TResponse> where TRequest :
     ValueTask<TResponse> Handle(TRequest request, ValueRequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Contextual variant of <see cref="ValueRequestHandlerDelegate{TResponse}"/>: the request travels
+/// with the delegate instead of being captured in a closure, so the mediator can compose the
+/// pipeline once and reuse it for every send.
+/// </summary>
+public delegate ValueTask<TResponse> ValueContextualRequestHandlerDelegate<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken);
+
+/// <summary>
+/// ValueTask pipeline behavior whose <c>next</c> delegate receives the request.
+/// When every behavior applicable to a request implements this interface, the generated mediator
+/// builds the pipeline once per mediator instance instead of on every send, which removes one
+/// closure and one delegate per behavior from the hot path. Requests with any
+/// <see cref="IValuePipelineBehavior{TRequest, TResponse}"/> keep the per-call pipeline.
+/// </summary>
+public interface IValueContextualPipelineBehavior<TRequest, TResponse> where TRequest : notnull
+{
+    ValueTask<TResponse> Handle(TRequest request, ValueContextualRequestHandlerDelegate<TRequest, TResponse> next, CancellationToken cancellationToken);
+}
+
 public delegate ValueTask ValueNotificationHandlerDelegate(CancellationToken cancellationToken);
 
 public interface IValueNotificationPipelineBehavior<in TNotification> where TNotification : notnull
