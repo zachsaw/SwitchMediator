@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection;
 
@@ -17,6 +17,17 @@ public class SwitchMediatorOptions
     /// The default lifetime for the services registered by the mediator.
     /// </summary>
     public ServiceLifetime ServiceLifetime { get; set; } = ServiceLifetime.Scoped;
+
+    /// <summary>
+    /// Validates when the application starts that every handler and behavior the mediator can dispatch
+    /// can actually be resolved from the container, and fails with the list of the ones that cannot.
+    /// Off by default.
+    /// The container cannot validate the mediator when it builds its graph, because its components are
+    /// registered through factories (generated registrations), so a missing dependency would otherwise
+    /// surface on the first send of that request. The validation runs in an <c>IHostedService</c>, so it
+    /// needs a host, and it instantiates every component once: use it in development and testing.
+    /// </summary>
+    public bool ValidateOnStart { get; set; }
     
     /// <summary>
     /// Specify explicit notification handler ordering. Any other handlers not specified will assume lower priority.
