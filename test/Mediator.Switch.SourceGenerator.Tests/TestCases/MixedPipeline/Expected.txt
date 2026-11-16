@@ -172,7 +172,7 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         var tests_MixedPipeline_MixedPingHandler = Get<global::Tests.MixedPipeline.MixedPingHandler>();
 
         return
-            tests_MixedPipeline_MixedContextualLogging__tests_MixedPipeline_MixedPing.Handle(request, (_, ct) =>
+            tests_MixedPipeline_MixedContextualLogging__tests_MixedPipeline_MixedPing.Handle(request, (request, ct) =>
             tests_MixedPipeline_MixedClassicAudit__tests_MixedPipeline_MixedPing.Handle(request, ct =>
             /* Request Handler */ tests_MixedPipeline_MixedPingHandler.Handle(request, ct),
             ct),

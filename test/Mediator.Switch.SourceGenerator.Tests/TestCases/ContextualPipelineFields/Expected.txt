@@ -174,8 +174,8 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         var tests_ContextualPipelineFields_ContextualPingHandler = Get(ref _tests_ContextualPipelineFields_ContextualPingHandler);
 
         return
-            tests_ContextualPipelineFields_ContextualLogging__tests_ContextualPipelineFields_ContextualPing.Handle(request, (_, ct) =>
-            tests_ContextualPipelineFields_ContextualAudit__tests_ContextualPipelineFields_ContextualPing.Handle(request, (_, ct) =>
+            tests_ContextualPipelineFields_ContextualLogging__tests_ContextualPipelineFields_ContextualPing.Handle(request, (request, ct) =>
+            tests_ContextualPipelineFields_ContextualAudit__tests_ContextualPipelineFields_ContextualPing.Handle(request, (request, ct) =>
             /* Request Handler */ tests_ContextualPipelineFields_ContextualPingHandler.Handle(request, ct),
             ct),
             cancellationToken);

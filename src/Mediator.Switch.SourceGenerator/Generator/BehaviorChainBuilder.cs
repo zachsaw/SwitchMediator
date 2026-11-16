@@ -41,9 +41,10 @@ public static class BehaviorChainBuilder
             seed: chain,
             func: (innerChain, behavior) =>
             {
-                // A contextual behavior expects the request on its next delegate: the per-call chain
-                // keeps capturing it, so the adapter simply ignores the parameter.
-                var nextParameter = isContextual?.Invoke(behavior.Class) == true ? "(_, ct)" : "ct";
+                // A contextual behavior passes the request on through its next delegate: the adapter names
+                // that parameter request, so the rest of the chain (inner behaviors and the handler) uses the
+                // request the behavior passed on rather than the one captured from the send.
+                var nextParameter = isContextual?.Invoke(behavior.Class) == true ? "(request, ct)" : "ct";
 
                 return $"{behavior.Class.GetVariableName()}__{requestName}.Handle(request, {nextParameter} =>\n            {innerChain.Replace("cancellationToken", "ct")},\n            cancellationToken)";
             });
