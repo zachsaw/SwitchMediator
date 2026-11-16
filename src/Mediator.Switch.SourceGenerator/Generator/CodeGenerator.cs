@@ -244,6 +244,28 @@ public static class CodeGenerator
                     $"typeof({b.Class.ToDisplayString(_fqn).DropGenerics()}<{actualNotif.ToDisplayString(_fqn)}>)");
             });
 
+        // The mediator's registrations: the same components, with factories that call their constructors.
+        static INamedTypeSymbol? Close(INamedTypeSymbol behavior, params ITypeSymbol[] arguments) =>
+            behavior.IsGenericType && behavior.OriginalDefinition.TypeParameters.Length == arguments.Length
+                ? behavior.OriginalDefinition.Construct(arguments)
+                : null;
+        var closedRequestBehaviors = actualRequestBehaviors.SelectMany(r =>
+            r.Behaviors.Select(b => Close(b.Class, r.Request.Class, b.TResponse))).ToList();
+        var closedNotificationBehaviors = notificationBehaviors
+            .Where(nb => usedNotifications.Contains(nb.NotificationInfo.ActualNotification))
+            .SelectMany(nb => nb.Behaviors.Select(b => Close(b.Class, nb.NotificationInfo.ActualNotification)))
+            .ToList();
+        var registrationMethod = RegistrationGenerator.Generate(
+            analysis,
+            className,
+            handlers.Select(h => h.Class).Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default),
+            usedNotifications.Select(n => (n, (IReadOnlyList<(INamedTypeSymbol Class, bool IsValueTask)>)notificationHandlers
+                .Where(h => h.TNotification.Equals(n, SymbolEqualityComparer.Default))
+                .Select(h => (h.Class, h.IsValueTask))
+                .ToList())),
+            closedRequestBehaviors.Concat(closedNotificationBehaviors),
+            _fqn);
+
         // Generate the complete SwitchMediator class
         return Normalize(
             $$"""
@@ -406,7 +428,7 @@ public static class CodeGenerator
                
                    {{string.Join("\n\n    ", behaviorMethods)}}
                
-                   {{cacheAccessor}}
+                   {{cacheAccessor}}{{registrationMethod}}
                
                    /// <summary>
                    /// Provides lists of SwitchMediator component implementation types.

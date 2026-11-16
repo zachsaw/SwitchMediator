@@ -37,6 +37,16 @@ public static class ServiceCollectionExtensions
 
         configure?.Invoke(options);
 
+        // A mediator generated with registrations is registered through their factories, so the container creates
+        // nothing by reflection (and Native AOT trims nothing it needs). Older generated mediators use KnownTypes.
+        var registrar = new ServiceCollectionRegistrar(services, options.ServiceLifetime, options.OrderedNotificationHandlers);
+        if (SwitchMediatorRegistrations.TryRegister<TSwitchMediator>(registrar))
+        {
+            registrar.Complete();
+            services.Add(new ServiceDescriptor(typeof(ISwitchMediatorServiceProvider), sp => new MicrosoftDependencyInjectionServiceProvider(sp), options.ServiceLifetime));
+            return services;
+        }
+
         services.Add(new ServiceDescriptor(typeof(ISwitchMediatorServiceProvider), typeof(MicrosoftDependencyInjectionServiceProvider), options.ServiceLifetime));
 
         services.Add(new ServiceDescriptor(typeof(IMediator), typeof(TSwitchMediator), options.ServiceLifetime));
@@ -61,6 +71,54 @@ public static class ServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    // Adds each generated component to the collection as it arrives. The handlers of a notification given an order
+    // are held until its last one arrives, then added in that order; handlers the order does not name follow, in
+    // their generated order.
+    private sealed class ServiceCollectionRegistrar(
+        IServiceCollection services,
+        ServiceLifetime lifetime,
+        Dictionary<Type, Type[]> order) : ISwitchMediatorRegistrar
+    {
+        private readonly List<(Type Service, Type Implementation, Func<IServiceProvider, object>? Factory)> _held = new();
+        private Type? _heldNotification;
+        private Type[] _heldOrder = Array.Empty<Type>();
+
+        public void Add(Type serviceType, Type implementationType, Func<IServiceProvider, object>? factory, Type? notificationType)
+        {
+            if (notificationType != _heldNotification)
+            {
+                Complete();
+            }
+            if (notificationType != null && order.TryGetValue(notificationType, out var specific))
+            {
+                _heldNotification = notificationType;
+                _heldOrder = specific;
+                _held.Add((serviceType, implementationType, factory));
+                return;
+            }
+            Write(serviceType, implementationType, factory);
+        }
+
+        public void Complete()
+        {
+            if (_held.Count > 0)
+            {
+                foreach (var (service, implementation, factory) in _held.OrderBy(h =>
+                             Array.IndexOf(_heldOrder, h.Implementation) is var index and >= 0 ? index : _heldOrder.Length))
+                {
+                    Write(service, implementation, factory);
+                }
+                _held.Clear();
+            }
+            _heldNotification = null;
+        }
+
+        private void Write(Type service, Type implementation, Func<IServiceProvider, object>? factory) =>
+            services.Add(factory != null
+                ? new ServiceDescriptor(service, factory, lifetime)
+                : new ServiceDescriptor(service, implementation, lifetime));
     }
 
     private static void RegisterRequestHandlers(IServiceCollection services, IEnumerable<Type> requestHandlerTypes, SwitchMediatorOptions options)

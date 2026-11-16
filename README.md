@@ -246,6 +246,10 @@ var sender = sp.GetRequiredService<ISender>();           // Task-based
 var valueSender = sp.GetRequiredService<IValueSender>(); // ValueTask-based (zero extra setup)
 ```
 
+The generated mediator also lists every component it resolves (handlers, notification handlers and behaviors), each with a factory that calls its constructor. `AddMediator<T>()` registers them with those factories, so the container creates them without reflection. That makes the first request faster, and it works when the application is trimmed or compiled with Native AOT.
+
+Other containers can register the same components: implement `ISwitchMediatorRegistrar` and pass it to `SwitchMediatorRegistrations.TryRegister<AppMediator>(registrar)`.
+
  ---
 
 ## What's New in V3
@@ -392,7 +396,7 @@ Register your custom mediator class in your application's composition root (e.g.
 
          // --- SwitchMediator Registration ---
          // Register your custom partial class.
-         // The extension method automatically finds the generated 'KnownTypes' on AppMediator.
+         // The extension method registers the components AppMediator's generated code lists.
          services.AddMediator<AppMediator>(op =>
          {
              op.ServiceLifetime = ServiceLifetime.Scoped;
