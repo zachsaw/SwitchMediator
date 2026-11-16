@@ -10,10 +10,11 @@ public record SemanticAnalysis(
     INamedTypeSymbol RequestSymbol,
     INamedTypeSymbol NotificationSymbol,
     List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> Handlers,
-    List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> RequestBehaviors,
+    List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors, bool AllContextual)> RequestBehaviors,
     List<(INamedTypeSymbol Class, ITypeSymbol TNotification, bool IsValueTask)> NotificationHandlers,
     List<((ITypeSymbol Notification, ITypeSymbol ActualNotification) NotificationInfo, List<(INamedTypeSymbol Class, ITypeSymbol TNotification, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)> NotificationBehaviors,
     List<ITypeSymbol> Notifications,
     HandlerCacheMode HandlerCacheMode = HandlerCacheMode.LazyDictionary,
-    MediatorServiceProviderMode ServiceProviderMode = MediatorServiceProviderMode.Abstraction
+    MediatorServiceProviderMode ServiceProviderMode = MediatorServiceProviderMode.Abstraction,
+    INamedTypeSymbol? ContextualBehaviorSymbol = null
 );

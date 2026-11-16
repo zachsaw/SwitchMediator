@@ -22,6 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
+* [What's New in V3.4](#whats-new-in-v34)
 * [What's New in V3.3](#whats-new-in-v33)
 * [What's New in V3.2](#whats-new-in-v32)
 * [What's New in V3.1](#whats-new-in-v31)
@@ -36,6 +37,37 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [License](#license)
 
  ---
+
+## What's New in V3.4
+
+### Contextual pipeline behaviors
+
+`IValueContextualPipelineBehavior<TRequest, TResponse>` is the variant of `IValuePipelineBehavior` whose `next` delegate receives the request:
+
+```csharp
+[PipelineBehaviorOrder(1)]
+public class Logging<TRequest, TResponse> : IValueContextualPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
+{
+    public ValueTask<TResponse> Handle(
+        TRequest request,
+        ValueContextualRequestHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken) => next(request, cancellationToken);
+}
+```
+
+Because the request travels with the delegate instead of being captured, a pipeline made **only** of contextual behaviors is composed once per mediator instance and reused for every send. Requests that still have an `IValuePipelineBehavior` keep the per-call pipeline (contextual behaviors are adapted automatically with `(_, ct) => ...`), so both interfaces coexist in the same assembly.
+
+Measured on a pipeline of four behaviors (BDN 0.15.8, .NET 10.0.14, M.E.DI 10.0.12, Apple M3 Max, default job):
+
+| Four behaviors | Per send | Allocated |
+| :--- | ---: | ---: |
+| `IValuePipelineBehavior` (per-call pipeline) | 230.8 ns | 880 B |
+| **`IValueContextualPipelineBehavior` (composed once)** | **185.6 ns** | **544 B** |
+
+The win grows with the number of behaviors and applies from the second send in a scope; scopes that send once are neutral (the pipeline is built lazily on first use). Only the dictionary-based `HandlerCache` modes compose the pipeline, because the composed chain is stored in the mediator cache.
+
+---
 
 ## What's New in V3.3
 

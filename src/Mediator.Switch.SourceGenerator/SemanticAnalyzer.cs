@@ -22,6 +22,7 @@ public class SemanticAnalyzer
     private readonly INamedTypeSymbol _iValueNotificationHandlerSymbol;
     private readonly INamedTypeSymbol _orderAttributeSymbol;
     private readonly INamedTypeSymbol _switchMediatorAttributeSymbol;
+    private readonly INamedTypeSymbol? _iValueContextualPipelineBehaviorSymbol;
 
     public SemanticAnalyzer(Compilation compilation)
     {
@@ -44,6 +45,7 @@ public class SemanticAnalyzer
         _iValueNotificationHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueNotificationHandler`1") ?? throw new InvalidOperationException("Could not find Mediator.Switch.IValueNotificationHandler`1");
         _orderAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.PipelineBehaviorOrderAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.PipelineBehaviorOrderAttribute");
         _switchMediatorAttributeSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.SwitchMediatorAttribute") ?? throw new InvalidOperationException("Could not find Mediator.Switch.SwitchMediatorAttribute");
+        _iValueContextualPipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueContextualPipelineBehavior`2");
     }
 
     public SemanticAnalysis Analyze(List<TypeDeclarationSyntax> types, CancellationToken cancellationToken)
@@ -119,7 +121,8 @@ public class SemanticAnalyzer
             NotificationBehaviors: processedNotificationBehaviors,
             Notifications: notifications,
             HandlerCacheMode: handlerCacheMode,
-            ServiceProviderMode: serviceProviderMode
+            ServiceProviderMode: serviceProviderMode,
+            ContextualBehaviorSymbol: _iValueContextualPipelineBehaviorSymbol
         );
     }
 
@@ -160,6 +163,10 @@ public class SemanticAnalyzer
 
         return fallback;
     }
+
+    private bool IsContextualBehavior(INamedTypeSymbol behaviorClass) =>
+        _iValueContextualPipelineBehaviorSymbol is not null &&
+        behaviorClass.AllInterfaces.Any(i => OriginalDefinitionMatches(i, _iValueContextualPipelineBehaviorSymbol));
 
     private bool IsSwitchMediator(INamedTypeSymbol typeSymbol) =>
         typeSymbol.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, _switchMediatorAttributeSymbol));
@@ -300,11 +307,17 @@ public class SemanticAnalyzer
             OriginalDefinitionMatches(i, _iPipelineBehaviorSymbol));
         var valueBehaviorInterface = typeSymbol.AllInterfaces.FirstOrDefault(i =>
             OriginalDefinitionMatches(i, _iValuePipelineBehaviorSymbol));
+        var contextualBehaviorInterface = _iValueContextualPipelineBehaviorSymbol is null
+            ? null
+            : typeSymbol.AllInterfaces.FirstOrDefault(i =>
+                OriginalDefinitionMatches(i, _iValueContextualPipelineBehaviorSymbol));
 
         if (taskBehaviorInterface != null)
             TryAddPipelineBehaviorFromInterface(typeSymbol, taskBehaviorInterface, behaviors, isValueTask: false);
         if (valueBehaviorInterface != null)
             TryAddPipelineBehaviorFromInterface(typeSymbol, valueBehaviorInterface, behaviors, isValueTask: true);
+        if (contextualBehaviorInterface != null)
+            TryAddPipelineBehaviorFromInterface(typeSymbol, contextualBehaviorInterface, behaviors, isValueTask: true);
     }
 
     private void TryAddPipelineBehaviorFromInterface(
@@ -329,7 +342,9 @@ public class SemanticAnalyzer
 
         if (!SymbolEqualityComparer.Default.Equals(interfaceTRequest, classTRequest))
         {
-            var ifaceName = isValueTask ? "IValuePipelineBehavior" : "IPipelineBehavior";
+            var ifaceName = SymbolEqualityComparer.Default.Equals(behaviorInterface.OriginalDefinition, _iValueContextualPipelineBehaviorSymbol)
+                ? "IValueContextualPipelineBehavior"
+                : isValueTask ? "IValuePipelineBehavior" : "IPipelineBehavior";
             throw new SourceGenerationException(
                 $"The first type argument to {ifaceName} in '{typeSymbol.ToDisplayString()}' must be the behavior's first generic type parameter.", location);
         }
@@ -450,14 +465,16 @@ public class SemanticAnalyzer
         }
     }
 
-    private List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors)>
+    private List<((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors, bool AllContextual)>
         ProcessRequestBehaviors(
             List<(INamedTypeSymbol Class, ITypeSymbol TResponse)> requests,
             List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors) =>
         requests.Select(request =>
         {
             var applicableBehaviors = GetApplicableBehaviors(behaviors, request);
-            return (Request: request, Behaviors: applicableBehaviors.OrderByDescending(b => GetOrder(b.Class)).ToList());
+            var orderedBehaviors = applicableBehaviors.OrderByDescending(b => GetOrder(b.Class)).ToList();
+            var allContextual = orderedBehaviors.Count > 0 && orderedBehaviors.All(b => IsContextualBehavior(b.Class));
+            return (Request: request, Behaviors: orderedBehaviors, AllContextual: allContextual);
         }).ToList();
 
     private IEnumerable<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> GetApplicableBehaviors(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, INamedTypeSymbol? WrapperType, bool IsValueTask)> behaviors, (INamedTypeSymbol Class, ITypeSymbol TResponse) request)

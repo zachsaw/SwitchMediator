@@ -123,7 +123,7 @@ public static class CodeGenerator
             ? Enumerable.Empty<string>()
             : actualRequestBehaviors.SelectMany(r =>
             {
-                var (request, applicableBehaviors) = r;
+                var (request, applicableBehaviors, _) = r;
                 return applicableBehaviors.Select(b =>
                     $"private {b.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {b.TResponse.ToDisplayString(_fqn)}>? _{b.Class.GetVariableName()}__{request.Class.GetVariableName()};");
             });
@@ -185,8 +185,26 @@ public static class CodeGenerator
         });
 
         // Generate behavior chain methods for requests
+        // The chain token type is only emitted once, inside the first contextual pipeline method.
+        INamedTypeSymbol? firstContextualRequest = null;
+
+        if (cacheMode is HandlerCacheMode.Dictionary or HandlerCacheMode.LazyDictionary)
+        {
+            firstContextualRequest = actualRequestBehaviors
+                .Where(r => r.AllContextual)
+                .Where(r => handlers.FirstOrDefault(h => h.TRequest.Equals(r.Request.Class, SymbolEqualityComparer.Default)).IsValueTask)
+                .Select(r => r.Request.Class)
+                .FirstOrDefault();
+        }
+
         var behaviorMethods = actualRequestBehaviors
-            .Select(r => TryGenerateBehaviorMethod(handlers, r, cacheMode))
+            .Select(r => TryGenerateBehaviorMethod(
+                handlers,
+                r,
+                cacheMode,
+                emitChainToken: firstContextualRequest is not null &&
+                                SymbolEqualityComparer.Default.Equals(r.Request.Class, firstContextualRequest),
+                contextualSymbol: analysis.ContextualBehaviorSymbol))
             .Where(m => m != null);
 
         // Generate Task Publish method switch cases (Task-based notification handlers only)
@@ -212,7 +230,7 @@ public static class CodeGenerator
 
         var pipelineBehaviorTypes = actualRequestBehaviors.SelectMany(r =>
         {
-            var (request, applicableBehaviors) = r;
+            var (request, applicableBehaviors, _) = r;
             return applicableBehaviors.Select(b =>
                 $"typeof({b.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {b.TResponse.ToDisplayString(_fqn)}>)");
         });
@@ -440,6 +458,10 @@ public static class CodeGenerator
     /// How a component is resolved at the call sites: a field slot (HandlerCache.Fields) or a
     /// typed lookup through the cache accessor (every other mode).
     /// </summary>
+    private static bool IsContextualBehavior(INamedTypeSymbol behavior, INamedTypeSymbol? contextualSymbol) =>
+        contextualSymbol is not null &&
+        behavior.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, contextualSymbol));
+
     private static string CacheCall(HandlerCacheMode cacheMode, string fieldExpression, string typeExpression) =>
         cacheMode == HandlerCacheMode.Fields ? $"Get(ref {fieldExpression})" : $"Get<{typeExpression}>()";
 
@@ -615,27 +637,88 @@ public static class CodeGenerator
           """;
     }
 
-    private static string? TryGenerateBehaviorMethod(List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
-        ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request, List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors) r,
-        HandlerCacheMode cacheMode)
+    private static string? TryGenerateBehaviorMethod(
+        List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
+        ((INamedTypeSymbol Class, ITypeSymbol TResponse) Request,
+         List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, IReadOnlyList<ITypeParameterSymbol> TypeParameters, bool IsValueTask)> Behaviors,
+         bool AllContextual) r,
+        HandlerCacheMode cacheMode,
+        bool emitChainToken,
+        INamedTypeSymbol? contextualSymbol)
     {
-        var (request, applicableBehaviors) = r;
+        var (request, applicableBehaviors, allContextual) = r;
         var handler = handlers.FirstOrDefault(h => h.TRequest.Equals(request.Class, SymbolEqualityComparer.Default));
         if (handler == default) return null;
+
         var requestName = request.Class.GetVariableName();
+        var methodSuffix = request.Class.GetVariableName(false);
+        var requestType = request.Class.ToDisplayString(_fqn);
+        var responseType = request.TResponse.ToDisplayString(_fqn);
+        var returnType = handler.IsValueTask
+            ? $"global::System.Threading.Tasks.ValueTask<{responseType}>"
+            : $"global::System.Threading.Tasks.Task<{responseType}>";
+
         var chainVars = applicableBehaviors.Select(behavior => $"var {behavior.Class.GetVariableName()}__{requestName} = {CacheCall(cacheMode, $"_{behavior.Class.GetVariableName()}__{requestName}", $"{behavior.Class.ToDisplayString(_fqn).DropGenerics()}<{request.Class.ToDisplayString(_fqn)}, {behavior.TResponse.ToDisplayString(_fqn)}>")};");
         var coreVar = $"var {handler.Class.GetVariableName()} = {CacheCall(cacheMode, $"_{handler.Class.GetVariableName()}", handler.Class.ToDisplayString(_fqn))};";
 
-        var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
-        var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall);
+        // Every applicable behavior is contextual (and the cache is dictionary backed): the pipeline
+        // only needs the behavior instances, so it is composed once per mediator and reused, which
+        // drops one closure and one delegate per behavior from every send.
+        var useCachedChain = allContextual
+            && handler.IsValueTask
+            && cacheMode is HandlerCacheMode.Dictionary or HandlerCacheMode.LazyDictionary;
 
-        var returnType = handler.IsValueTask
-            ? $"global::System.Threading.Tasks.ValueTask<{request.TResponse.ToDisplayString(_fqn)}>"
-            : $"global::System.Threading.Tasks.Task<{request.TResponse.ToDisplayString(_fqn)}>";
+        if (useCachedChain)
+        {
+            var chainType = $"global::System.Func<{requestType}, global::System.Threading.CancellationToken, {returnType}>";
+            var cacheInit = cacheMode == HandlerCacheMode.LazyDictionary
+                ? "var cache = _cache ??= new global::System.Collections.Generic.Dictionary<global::System.Type, object?>();"
+                : "var cache = _cache;";
+            var contextualChain = BehaviorChainBuilder.BuildContextualRequest(applicableBehaviors, requestName, handler.Class.GetVariableName());
+            var handleMethod = $$"""
+                                private {{returnType}} Handle_{{methodSuffix}}(
+                                        {{requestType}} request,
+                                        global::System.Threading.CancellationToken cancellationToken)
+                                    {
+                                        {{cacheInit}}
+                                        if (cache.TryGetValue(typeof(PipelineChainToken<{{requestType}}>), out var cached))
+                                        {
+                                            return (({{chainType}})cached!)(request, cancellationToken);
+                                        }
+
+                                        var chain = CreateChain_{{methodSuffix}}();
+                                        cache[typeof(PipelineChainToken<{{requestType}}>)] = chain;
+
+                                        return chain(request, cancellationToken);
+                                    }
+                                """;
+
+            var createChainMethod = $$"""
+                                      private {{chainType}} CreateChain_{{methodSuffix}}()
+                                          {
+                                              {{string.Join("\n        ", chainVars)}}
+                                              {{coreVar}}
+
+                                              return (r0, c0) =>
+                                                  {{contextualChain}};
+                                          }
+                                      """;
+
+            // Every returned block is re-indented by the member level when the caller joins the
+            // generated methods, so each one starts at column zero.
+            return string.Join(
+                "\n\n    ",
+                emitChainToken
+                    ? ["/// <summary>Cache key of a composed pipeline. One distinct type per request.</summary>\n    private readonly struct PipelineChainToken<TRequest>;", handleMethod, createChainMethod]
+                    : [handleMethod, createChainMethod]);
+        }
+
+        var coreCall = $"{handler.Class.GetVariableName()}.Handle(request, cancellationToken)";
+        var chain = BehaviorChainBuilder.BuildRequest(applicableBehaviors, requestName, coreCall, behavior => IsContextualBehavior(behavior, contextualSymbol));
 
         return $$"""
-                 private {{returnType}} Handle_{{request.Class.GetVariableName(false)}}(
-                         {{request.Class.ToDisplayString(_fqn)}} request,
+                 private {{returnType}} Handle_{{methodSuffix}}(
+                         {{requestType}} request,
                          global::System.Threading.CancellationToken cancellationToken)
                      {
                          {{string.Join("\n        ", chainVars)}}

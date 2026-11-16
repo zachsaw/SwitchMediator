@@ -45,6 +45,7 @@ public class PipelineConsistencyAnalyzer : DiagnosticAnalyzer
         var iValueRequestHandlerSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueRequestHandler`2");
         var iPipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IPipelineBehavior`2");
         var iValuePipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValuePipelineBehavior`2");
+        var iValueContextualPipelineBehaviorSymbol = compilation.GetTypeByMetadataName("Mediator.Switch.IValueContextualPipelineBehavior`2");
 
         if (iRequestHandlerSymbol == null || iValueRequestHandlerSymbol == null ||
             iPipelineBehaviorSymbol == null || iValuePipelineBehaviorSymbol == null)
@@ -57,11 +58,14 @@ public class PipelineConsistencyAnalyzer : DiagnosticAnalyzer
             .Where(t => !t.IsAbstract && !t.IsUnboundGenericType)
             .SelectMany(t => t.AllInterfaces
                 .Where(i => SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iPipelineBehaviorSymbol) ||
-                            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValuePipelineBehaviorSymbol))
+                            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValuePipelineBehaviorSymbol) ||
+                            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValueContextualPipelineBehaviorSymbol))
                 .Select(i => (
                     BehaviorType: t,
                     Interface: i,
-                    IsValue: SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValuePipelineBehaviorSymbol),
+                    IsValue: SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValuePipelineBehaviorSymbol) ||
+                             SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValueContextualPipelineBehaviorSymbol),
+                    IsContextual: SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iValueContextualPipelineBehaviorSymbol),
                     TRequest: i.TypeArguments.Length == 2 ? i.TypeArguments[0] : null
                 )))
             .Where(b => b.TRequest != null)
@@ -98,7 +102,7 @@ public class PipelineConsistencyAnalyzer : DiagnosticAnalyzer
                         _rule,
                         location,
                         behavior.BehaviorType.Name,
-                        "IValuePipelineBehavior",
+                        behavior.IsContextual ? "IValueContextualPipelineBehavior" : "IValuePipelineBehavior",
                         tRequest.Name,
                         "IRequestHandler"));
                 }
