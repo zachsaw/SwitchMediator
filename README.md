@@ -56,7 +56,7 @@ public class Logging<TRequest, TResponse> : IValueContextualPipelineBehavior<TRe
 }
 ```
 
-Because the request travels with the delegate instead of being captured, a pipeline made **only** of contextual behaviors is composed once per mediator instance and reused for every send. Requests that still have an `IValuePipelineBehavior` keep the per-call pipeline (contextual behaviors are adapted automatically with `(_, ct) => ...`), so both interfaces coexist in the same assembly.
+Because the request travels with the delegate instead of being captured, a pipeline made **only** of contextual behaviors is composed once per mediator instance and reused for every send. Requests that still have an `IValuePipelineBehavior` keep the per-call pipeline (contextual behaviors are adapted automatically, and the request each one passes to `next` still reaches the inner behaviors and the handler), so both interfaces coexist in the same assembly.
 
 Measured on a pipeline of four behaviors (BDN 0.15.8, .NET 10.0.14, M.E.DI 10.0.12, Apple M3 Max, default job):
 
