@@ -202,6 +202,29 @@ public partial class TestMediator : global::Mediator.Switch.IMediator, global::M
         return resolved;
     }
 
+    static TestMediator()
+    {
+        global::Mediator.Switch.SwitchMediatorRegistrations.Add(typeof(TestMediator), RegisterSwitchMediatorComponents);
+    }
+
+    private static void RegisterSwitchMediatorComponents(global::Mediator.Switch.ISwitchMediatorRegistrar registrar)
+    {
+        registrar.Add(typeof(global::Mediator.Switch.IMediator), typeof(TestMediator), sp => new TestMediator(SwitchMediatorResolve<global::Mediator.Switch.ISwitchMediatorServiceProvider>(sp)), null);
+        registrar.Add(typeof(global::Mediator.Switch.ISender), typeof(TestMediator), sp => SwitchMediatorResolve<global::Mediator.Switch.IMediator>(sp), null);
+        registrar.Add(typeof(global::Mediator.Switch.IPublisher), typeof(TestMediator), sp => SwitchMediatorResolve<global::Mediator.Switch.IMediator>(sp), null);
+        registrar.Add(typeof(global::Mediator.Switch.IValueMediator), typeof(TestMediator), sp => SwitchMediatorResolve<global::Mediator.Switch.IMediator>(sp), null);
+        registrar.Add(typeof(global::Mediator.Switch.IValueSender), typeof(TestMediator), sp => SwitchMediatorResolve<global::Mediator.Switch.IMediator>(sp), null);
+        registrar.Add(typeof(global::Mediator.Switch.IValuePublisher), typeof(TestMediator), sp => SwitchMediatorResolve<global::Mediator.Switch.IMediator>(sp), null);
+        registrar.Add(typeof(global::Tests.Notifications.SimpleRequestHandler), typeof(global::Tests.Notifications.SimpleRequestHandler), sp => new global::Tests.Notifications.SimpleRequestHandler(), null);
+        registrar.Add(typeof(global::Mediator.Switch.INotificationHandler<global::Tests.Notifications.OrderCreatedEvent>), typeof(global::Tests.Notifications.OrderEmailNotifier), sp => new global::Tests.Notifications.OrderEmailNotifier(), typeof(global::Tests.Notifications.OrderCreatedEvent));
+        registrar.Add(typeof(global::Mediator.Switch.INotificationHandler<global::Tests.Notifications.OrderCreatedEvent>), typeof(global::Tests.Notifications.OrderAnalyticsTracker), sp => new global::Tests.Notifications.OrderAnalyticsTracker(), typeof(global::Tests.Notifications.OrderCreatedEvent));
+    }
+
+    private static T SwitchMediatorResolve<T>(global::System.IServiceProvider sp) where T : notnull
+    {
+        return (T)(sp.GetService(typeof(T)) ?? throw new global::System.InvalidOperationException($"No service for type '{typeof(T)}' has been registered."));
+    }
+
     /// <summary>
     /// Provides lists of SwitchMediator component implementation types.
     /// </summary>
