@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Mediator.Switch.Extensions.Microsoft.DependencyInjection;
 
@@ -39,11 +40,13 @@ public static class ServiceCollectionExtensions
 
         // A mediator generated with registrations is registered through their factories, so the container creates
         // nothing by reflection (and Native AOT trims nothing it needs). Older generated mediators use KnownTypes.
-        var registrar = new ServiceCollectionRegistrar(services, options.ServiceLifetime, options.OrderedNotificationHandlers);
+        var components = new List<(Type Service, Type Implementation)>();
+        var registrar = new ServiceCollectionRegistrar(services, options.ServiceLifetime, options.OrderedNotificationHandlers, components);
         if (SwitchMediatorRegistrations.TryRegister<TSwitchMediator>(registrar))
         {
             registrar.Complete();
             services.Add(new ServiceDescriptor(typeof(ISwitchMediatorServiceProvider), sp => new MicrosoftDependencyInjectionServiceProvider(sp), options.ServiceLifetime));
+            AddGraphValidation(services, options, components);
             return services;
         }
 
@@ -68,7 +71,28 @@ public static class ServiceCollectionExtensions
                 options.KnownTypes.NotificationTypes.Select(n => (n.NotificationType, n.HandlerTypes.ToArray())),
                 options);
             RegisterPipelineBehaviors(services, options.KnownTypes.PipelineBehaviorTypes, options);
+
+            foreach (var handlerType in options.KnownTypes.RequestHandlerTypes)
+            {
+                components.Add((handlerType, handlerType));
+            }
+
+            foreach (var (notificationType, handlerTypes) in options.KnownTypes.NotificationTypes)
+            {
+                foreach (var handlerType in handlerTypes)
+                {
+                    var service = typeof(IValueNotificationHandler<>).MakeGenericType(notificationType);
+                    components.Add((service.IsAssignableFrom(handlerType) ? service : typeof(INotificationHandler<>).MakeGenericType(notificationType), handlerType));
+                }
+            }
+
+            foreach (var behaviorType in options.KnownTypes.PipelineBehaviorTypes)
+            {
+                components.Add((behaviorType, behaviorType));
+            }
         }
+
+        AddGraphValidation(services, options, components);
 
         return services;
     }
@@ -79,7 +103,8 @@ public static class ServiceCollectionExtensions
     private sealed class ServiceCollectionRegistrar(
         IServiceCollection services,
         ServiceLifetime lifetime,
-        Dictionary<Type, Type[]> order) : ISwitchMediatorRegistrar
+        Dictionary<Type, Type[]> order,
+        List<(Type Service, Type Implementation)> components) : ISwitchMediatorRegistrar
     {
         private readonly List<(Type Service, Type Implementation, Func<IServiceProvider, object>? Factory)> _held = new();
         private Type? _heldNotification;
@@ -87,6 +112,8 @@ public static class ServiceCollectionExtensions
 
         public void Add(Type serviceType, Type implementationType, Func<IServiceProvider, object>? factory, Type? notificationType)
         {
+            components.Add((serviceType, implementationType));
+
             if (notificationType != _heldNotification)
             {
                 Complete();
@@ -119,6 +146,19 @@ public static class ServiceCollectionExtensions
             services.Add(factory != null
                 ? new ServiceDescriptor(service, factory, lifetime)
                 : new ServiceDescriptor(service, implementation, lifetime));
+    }
+
+    /// <summary>
+    /// Registers the startup validation of the mediator graph when the application asks for it.
+    /// </summary>
+    private static void AddGraphValidation(IServiceCollection services, SwitchMediatorOptions options, List<(Type Service, Type Implementation)> components)
+    {
+        if (!options.ValidateOnStart || components.Count == 0)
+        {
+            return;
+        }
+
+        services.AddSingleton<IHostedService>(sp => new MediatorGraphValidator(components, sp));
     }
 
     private static void RegisterRequestHandlers(IServiceCollection services, IEnumerable<Type> requestHandlerTypes, SwitchMediatorOptions options)

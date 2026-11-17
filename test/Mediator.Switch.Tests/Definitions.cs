@@ -426,3 +426,14 @@ public class SecurityAuditBehavior<TNotification>(NotificationTracker tracker)
         await next(cancellationToken);
     }
 }
+
+// Intentionally unresolvable: MissingDependency is never registered. It lets the graph validation be
+// tested; no test sends this request.
+public sealed record BrokenRequest : IRequest<string>;
+
+public sealed class BrokenRequestHandler(MissingDependency missing) : IRequestHandler<BrokenRequest, string>
+{
+    public Task<string> Handle(BrokenRequest request, CancellationToken cancellationToken = default) => Task.FromResult(missing.ToString() ?? string.Empty);
+}
+
+public sealed class MissingDependency;

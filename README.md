@@ -22,6 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
+* [What's New in V3.5](#whats-new-in-v35)
 * [What's New in V3.4](#whats-new-in-v34)
 * [What's New in V3.3](#whats-new-in-v33)
 * [What's New in V3.2](#whats-new-in-v32)
@@ -37,6 +38,29 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [License](#license)
 
  ---
+
+## What's New in V3.5
+
+### Validate the mediator graph on start
+
+`AddMediator` registers its components through generated factories (3.4), so `ValidateOnBuild` cannot
+inspect them: a handler whose dependency is not registered would only fail on the first send of that
+request. With `ValidateOnStart` the application checks the whole graph when it starts and fails with
+the list of the components that cannot be resolved:
+
+```csharp
+services.AddMediator<AppMediator>(options =>
+{
+    options.ServiceLifetime = ServiceLifetime.Transient;
+    options.ValidateOnStart = true;   // off by default; meant for development and testing
+});
+```
+
+It runs in an `IHostedService`, so it needs a host, and it instantiates every handler and behavior once
+(scoped components in their own scope). In production leave it off: it is a development aid, not a
+health check.
+
+---
 
 ## What's New in V3.4
 
