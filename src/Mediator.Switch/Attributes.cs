@@ -12,6 +12,14 @@ public sealed class RequestHandlerAttribute(Type handlerType) : Attribute
     public Type HandlerType { get; } = handlerType;
 }
 
+/// <summary>
+/// Marks a request that is never sent through the mediator. The generator reports SMG003 for every
+/// request without a handler, because sending it throws at runtime; this attribute opts the request
+/// out of that check (for example, a request kept for reference or dispatched somewhere else).
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class AllowMissingHandlerAttribute : Attribute;
+
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class SwitchMediatorAttribute : Attribute
 {
