@@ -27,6 +27,8 @@ namespace Mediator.Switch.SourceGenerator
 
                 cancellationToken.ThrowIfCancellationRequested();
 
+                ReportMissingHandlers(context, analysis);
+
                 var sourceCode = CodeGenerator.Generate(analysis);
 
                 context.AddSource($"{analysis.MediatorClass.Name}.g.cs", sourceCode);
@@ -70,5 +72,49 @@ namespace Mediator.Switch.SourceGenerator
                     Location.None));
             }
         }
+
+        private static readonly DiagnosticDescriptor MissingHandlerRule = new(
+            "SMG003",
+            "Request has no handler",
+            "Request '{0}' has no handler, so sending it throws at runtime. Add a handler, or mark the request with [AllowMissingHandler] if it is never sent.",
+            "Mediator.Switch.Generation",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        /// <summary>
+        /// Reports every request the generated dispatcher cannot route, using the same resolution as
+        /// the switch (base types included), so the diagnostic matches what Send would do at runtime.
+        /// </summary>
+        private static void ReportMissingHandlers(GeneratorExecutionContext context, SemanticAnalysis analysis)
+        {
+            foreach (var request in analysis.RequestBehaviors)
+            {
+                var requestType = request.Request.Class;
+
+                if (requestType.IsAbstract || requestType.IsUnboundGenericType || requestType.TypeParameters.Length > 0)
+                {
+                    continue;
+                }
+
+                if (AllowsMissingHandler(requestType))
+                {
+                    continue;
+                }
+
+                if (CodeGenerator.TryGetActualRequest(analysis.RequestSymbol, analysis.Handlers, request.Request) is not null)
+                {
+                    continue;
+                }
+
+                context.ReportDiagnostic(Diagnostic.Create(
+                    MissingHandlerRule,
+                    requestType.Locations.FirstOrDefault() ?? Location.None,
+                    requestType.Name));
+            }
+        }
+
+        private static bool AllowsMissingHandler(INamedTypeSymbol requestType) =>
+            requestType.GetAttributes().Any(a =>
+                a.AttributeClass?.ToDisplayString() == "Mediator.Switch.AllowMissingHandlerAttribute");
     }
 }

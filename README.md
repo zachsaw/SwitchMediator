@@ -22,6 +22,7 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 
 ## Table of Contents
 
+* [What's New in V4.0](#whats-new-in-v40)
 * [What's New in V3.5](#whats-new-in-v35)
 * [What's New in V3.4](#whats-new-in-v34)
 * [What's New in V3.3](#whats-new-in-v33)
@@ -38,6 +39,31 @@ By leveraging **C# Source Generators**, SwitchMediator moves the heavy lifting f
 * [License](#license)
 
  ---
+
+## What's New in V4.0
+
+### A request without a handler is a build error
+
+The generated dispatcher only routes requests that have a handler; sending any other request throws
+`ArgumentException("No handler for …")` at runtime. The generator now reports **SMG003** for every
+request it cannot route, so the problem shows up in the build:
+
+```
+error SMG003: Request 'CreateOrderCommand' has no handler, so sending it throws at runtime.
+Add a handler, or mark the request with [AllowMissingHandler] if it is never sent
+```
+
+- It uses the same resolution as the dispatcher, base types included: a handler for `BaseRequest` still
+  covers `DerivedRequest`, and abstract or open generic request types are ignored.
+- Because generator diagnostics cannot be silenced with `#pragma`, a request that is intentionally
+  never sent is marked with the new attribute:
+
+```csharp
+[AllowMissingHandler]
+public class DeprecatedCommand : IRequest<string>;
+```
+
+---
 
 ## What's New in V3.5
 

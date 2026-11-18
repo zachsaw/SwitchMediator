@@ -454,7 +454,7 @@ public static class CodeGenerator
                """);
     }
 
-    private static ITypeSymbol? TryGetActualRequest(
+    internal static ITypeSymbol? TryGetActualRequest(
         ITypeSymbol iRequestType,
         List<(INamedTypeSymbol Class, ITypeSymbol TRequest, ITypeSymbol TResponse, bool IsValueTask)> handlers,
         (INamedTypeSymbol Class, ITypeSymbol TResponse) request)

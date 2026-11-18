@@ -8,6 +8,7 @@ namespace Tests.GenericsIgnored;
 [SwitchMediator]
 public partial class TestMediator;
 
+[AllowMissingHandler]
 public class Ping : IRequest<string>;
 public abstract class PingHandler : IRequestHandler<Ping, string>
 {
